@@ -1,0 +1,18 @@
+{
+    "headers": {
+        "accept": "application/json,*/*",
+        "accept-encoding": "gzip,deflate",
+        "content-type": "application/x-www-form-urlencoded",
+        "host": "u77t8f4sy3.execute-api.ap-southeast-1.amazonaws.com",
+        "user-agent": "Slackbot 1.0(+https://api.slack.com/robots)",
+        "x-forwarded-for": "34.229.159.72",
+        "x-slack-signature": "v0=562b896fec6d99ed59fed7a06cce695c3f0b62d7f52d96411b457fb927985e6b"
+    },
+    "requestContext": {
+        "accountId": "457551501671",
+        "resourceId": "dev", 
+        "domainName": "u77t8f4sy3.execute-api.ap-southeast-1.amazonaws.com"
+    },
+    "body": "dG9rZW49c1lqcHJ0d2JKdWU4UFZJNExCY25vbThHJnRlYW1faWQ9VDAyMlBBNU43S1AmdGVhbV9kb21haW49dmN0ZXN0LWhxJmNoYW5uZWxfaWQ9QzAyMzUxNlRRMFomY2hhbm5lbF9uYW1lPWJ1ZGdldCZ1c2VyX2lkPVUwMjRVMDMySDhBJnVzZXJfbmFtZT12dS5uZ3V5ZW4mY29tbWFuZD0lMkZrdWRvcyZ0ZXh0PSU0MHZ1Lnllbi5uZ3V5ZW4uODgrJTQwbXJia2l0ZXIraGVsbG8rZ3V5JmFwaV9hcHBfaWQ9QTAyMkJLQ0JGMUQmaXNfZW50ZXJwcmlzZV9pbnN0YWxsPWZhbHNlJnJlc3BvbnNlX3VybD1odHRwcyUzQSUyRiUyRmhvb2tzLnNsYWNrLmNvbSUyRmNvbW1hbmRzJTJGVDAyMlBBNU43S1AlMkYyMTY0MjIyMzM4OTc5JTJGb2RoUGxseWJIcUZ3ajNEVkoyeWYwWDhLJnRyaWdnZXJfaWQ9MjE3NjYyNzcxMjc4NS4yMDkxMzQ1NzU1NjY5LmI1YWE4MGE4MTg1MmZiZDVlNjg0MDk0OGUzOWJlNGFi",
+    "isBase64Encoded": true
+}
