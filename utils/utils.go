@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"io/ioutil"
 	"regexp"
 	"time"
 
@@ -72,7 +73,7 @@ func ValidateDateTimeFormatISO(dateValue string) bool {
 	return true
 }
 
-var textUserIdCoveredRegex = regexp.MustCompile(`<[A-Za-z0-9@|]*>`)
+var textUserIdCoveredRegex = regexp.MustCompile(`<[A-Za-z0-9@|]*>|@[^ ]*`)
 var userIdRegex = regexp.MustCompile(`[^@<>|]+`)
 
 func ExtractUserIdsFromText(text string) []string {
@@ -89,4 +90,12 @@ func ExtractUserIdsFromText(text string) []string {
 		v = append(v, userId)
 	}
 	return v
+}
+
+func ReadFile(fileName string) (string, error) {
+	content, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }

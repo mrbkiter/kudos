@@ -26,6 +26,9 @@ type DDBRepo struct {
 }
 
 func (me *DDBRepo) WriteKudosCommand(ctx *model.MyContext, data *model.KudosData) error {
+	if len(data.TargetUserIds) == 0 {
+		return nil
+	}
 	commands := mapKudosDataToKudosCommandEtt(data)
 
 	commandWrites := make([]*dynamodb.WriteRequest, len(commands))
