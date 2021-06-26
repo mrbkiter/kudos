@@ -55,13 +55,19 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	myCtx.Log.Infow("Payload", "request", request)
 	req := service.ConvertAwsRequestToSlackCommandRequest(request)
 	myCtx.Log.Infow("Converted Request", "request", req)
-	resp, err := handleKudosCommand(myCtx, req)
-	if err != nil {
-		return events.APIGatewayProxyResponse{StatusCode: 400}, err
+	if *req.Command == "/kudos" {
+		resp, err := handleKudosCommand(myCtx, req)
+		if err != nil {
+			return events.APIGatewayProxyResponse{StatusCode: 400}, err
+		}
+		headers := make(map[string]string)
+		headers["Content-type"] = "application/json"
+		return events.APIGatewayProxyResponse{StatusCode: 200, Headers: headers, Body: utils.ConvertObjectToJSON(resp)}, nil
+	} else if *req.Command == "/kudos-report" {
+
+		return events.APIGatewayProxyResponse{StatusCode: 400}, nil
 	}
-	headers := make(map[string]string)
-	headers["Content-type"] = "application/json"
-	return events.APIGatewayProxyResponse{StatusCode: 200, Headers: headers, Body: utils.ConvertObjectToJSON(resp)}, nil
+	return events.APIGatewayProxyResponse{StatusCode: 404, Body: "Command not found"}, nil
 }
 
 func handleKudosCommand(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
@@ -76,6 +82,11 @@ func handleKudosCommand(ctx *model.MyContext, slackCommand *slackmodel.SlackComm
 	return service.BuildSlackResponse(kudosData), nil
 }
 
+func handleKudosReport(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
+	//read this week, last week, this month
+
+	return nil, nil
+}
 func main() {
 	log.Println("Started Slack Kudos App")
 	initEnvironment()

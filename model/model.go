@@ -29,6 +29,13 @@ type KudosData struct {
 	Username      string
 }
 
+type KudosCountUpdate struct {
+	TeamId    string
+	UserId    string
+	Timestamp int64
+	Counter   int
+}
+
 type AppId string
 
 const (
