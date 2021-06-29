@@ -2,11 +2,15 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"regexp"
 	"time"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambdacontext"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"
 	"kudos-app.github.com/model"
@@ -98,4 +102,29 @@ func ReadFile(fileName string) (string, error) {
 		return "", err
 	}
 	return string(content), nil
+}
+
+func UnmarshalStreamImage(attribute map[string]events.DynamoDBAttributeValue, out interface{}) error {
+
+	dbAttrMap := make(map[string]*dynamodb.AttributeValue)
+
+	for k, v := range attribute {
+
+		var dbAttr dynamodb.AttributeValue
+
+		bytes, marshalErr := v.MarshalJSON()
+		if marshalErr != nil {
+
+			return marshalErr
+
+		}
+
+		json.Unmarshal(bytes, &dbAttr)
+
+		dbAttrMap[k] = &dbAttr
+
+	}
+
+	return dynamodbattribute.UnmarshalMap(dbAttrMap, out)
+
 }

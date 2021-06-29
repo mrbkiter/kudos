@@ -91,8 +91,5 @@ func main() {
 	log.Println("Started Slack Kudos App")
 	initEnvironment()
 	repo = initRepo()
-	//init engine
-	// initBotEngine(retChan)
-	// ctx, cancelFunc := context.WithCancel(context.Background())
 	lambda.Start(handler)
 }
