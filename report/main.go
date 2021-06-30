@@ -58,6 +58,7 @@ func main() {
 func handler(ctx context.Context, ddbEvent events.DynamoDBEvent) error {
 	myCtx := utils.NewMyContext(context.Background(), "")
 	myCtx.GlobalConfig = globalConfig
+	myCtx.Log.Infow("Payload", "event", ddbEvent)
 	for _, record := range ddbEvent.Records {
 		// newctx.Log.Infof("[%s %s], old = %s, new = %s", record.EventName, record.Change.Keys, record.Change.OldImage, record.Change.NewImage)
 		oldData := new(ddb_entity.KudosCommand)
@@ -65,17 +66,36 @@ func handler(ctx context.Context, ddbEvent events.DynamoDBEvent) error {
 
 		utils.UnmarshalStreamImage(record.Change.OldImage, oldData)
 		utils.UnmarshalStreamImage(record.Change.NewImage, newData)
-		counter := new(model.KudosCountUpdate)
-		if record.EventName == "INSERT" {
 
-		} else if record.EventName == "MODIFY" {
+		if (newData != nil && newData.Type == ddb_entity.CommandType) || (oldData != nil && oldData.Type == ddb_entity.CommandType) {
+			counter := new(model.KudosCountUpdate)
+			if record.EventName == "INSERT" {
+				//add new
+				counter := new(model.KudosCountUpdate)
+				counter.Counter = 1
+				counter.TeamId = newData.TeamId
+				counter.UserId = newData.UserId
+				counter.Timestamp = newData.Timestamp
+				repo.IncreaseKudosCounter(myCtx, counter)
+			} else if record.EventName == "REMOVE" {
+				//remove
+				counter := new(model.KudosCountUpdate)
+				counter.Counter = -1
+				counter.TeamId = oldData.TeamId
+				counter.UserId = oldData.UserId
+				counter.Timestamp = oldData.Timestamp
+				repo.IncreaseKudosCounter(myCtx, counter)
+			}
 
-		} else if record.EventName == "REMOVE" {
-
+			repo.IncreaseKudosCounter(myCtx, counter)
+		} else {
+			myCtx.Log.Infof("We dont capture events which does not have type = command")
 		}
-
-		repo.IncreaseKudosCounter(myCtx, counter)
 
 	}
 	return nil
+}
+
+func CheckCommandType(newData *ddb_entity.KudosCommand, oldData *ddb_entity.KudosCommand) bool {
+	return (newData != nil && newData.Type == ddb_entity.CommandType) || (oldData != nil && oldData.Type == ddb_entity.CommandType)
 }

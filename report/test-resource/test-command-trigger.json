@@ -1,0 +1,64 @@
+{
+    "Records": [
+        {
+            "awsRegion": "ap-southeast-1",
+            "dynamodb": {
+                "ApproximateCreationDateTime": 1625069562,
+                "Keys": {
+                    "id1": {
+                        "S": "T022PA5N7KP#U024D6VQX7Z"
+                    },
+                    "id2": {
+                        "S": "2220885562918.2091345755669.82bea57c7dd9df91c359afa8f1f18bf0"
+                    }
+                },
+                "NewImage": {
+                    "channelId": {
+                        "S": "D024D6W0B2B"
+                    },
+                    "id1": {
+                        "S": "T022PA5N7KP#U024D6VQX7Z"
+                    },
+                    "id2": {
+                        "S": "2220885562918.2091345755669.82bea57c7dd9df91c359afa8f1f18bf0"
+                    },
+                    "msgId": {
+                        "S": "2220885562918.2091345755669.82bea57c7dd9df91c359afa8f1f18bf0"
+                    },
+                    "sourceId": {
+                        "S": "U024U032H8A"
+                    },
+                    "teamId": {
+                        "S": "T022PA5N7KP"
+                    },
+                    "teamIdMonth": {
+                        "S": "T022PA5N7KP#2021-06"
+                    },
+                    "teamIdWeek": {
+                        "S": "T022PA5N7KP#2021#26"
+                    },
+                    "text": {
+                        "S": "/kudos 111 <@U024D6VQX7Z|vu.yen.nguyen.88>"
+                    },
+                    "timestamp": {
+                        "N": "1625069562"
+                    },
+                    "ttl": {
+                        "N": "1632845562"
+                    },
+                    "userId": {
+                        "S": "U024D6VQX7Z"
+                    }
+                },
+                "SequenceNumber": "95100000000000005167045653",
+                "SizeBytes": 445,
+                "StreamViewType": "NEW_AND_OLD_IMAGES"
+            },
+            "eventID": "312858b7dcd1870a0d1010fe468c3dd1",
+            "eventName": "INSERT",
+            "eventSource": "aws:dynamodb",
+            "eventVersion": "1.1",
+            "eventSourceARN": "arn:aws:dynamodb:ap-southeast-1:457551501671:table/dev-kudos/stream/2021-06-30T16:07:57.525"
+        }
+    ]
+}

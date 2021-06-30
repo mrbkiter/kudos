@@ -17,3 +17,6 @@ replace kudos-app.github.com/model => ../model
 replace kudos-app.github.com/repos => ../repos
 
 replace kudos-app.github.com/utils => ../utils
+
+replace kudos-app.github.com/ddb_entity => ../ddb_entity
+
