@@ -99,7 +99,10 @@ You need to create Slack Command in Slack App.
   
   ![image](https://user-images.githubusercontent.com/10323118/124391574-71eac980-dd1b-11eb-9993-c840f1d7a00d.png)
 
+## Usage: 
   
+  ![image](https://user-images.githubusercontent.com/10323118/124391623-b4140b00-dd1b-11eb-80d7-78e1af8e711e.png)
+
   
   
 
