@@ -55,21 +55,32 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	myCtx.Log.Infow("Payload", "request", request)
 	req := service.ConvertAwsRequestToSlackCommandRequest(request)
 	myCtx.Log.Infow("Converted Request", "request", req)
+	resp := new(slackmodel.SlackResponse)
+	var err error
 	if *req.Command == "/kudos" {
-		resp, err := handleKudosCommand(myCtx, req)
-		if err != nil {
-			return events.APIGatewayProxyResponse{StatusCode: 400}, err
-		}
-		headers := make(map[string]string)
-		headers["Content-type"] = "application/json"
-		return events.APIGatewayProxyResponse{StatusCode: 200, Headers: headers, Body: utils.ConvertObjectToJSON(resp)}, nil
+		resp, err = handleKudosCommand(myCtx, req)
 	} else if *req.Command == "/kudos-report" {
-
-		return events.APIGatewayProxyResponse{StatusCode: 400}, nil
+		resp, err = handleKudosReport(myCtx, req)
+	} else {
+		return events.APIGatewayProxyResponse{StatusCode: 404, Body: "Command not found"}, nil
 	}
-	return events.APIGatewayProxyResponse{StatusCode: 404, Body: "Command not found"}, nil
+	if err != nil {
+		return events.APIGatewayProxyResponse{StatusCode: 400}, err
+	}
+	headers := make(map[string]string)
+	headers["Content-type"] = "application/json"
+	return events.APIGatewayProxyResponse{StatusCode: 200, Headers: headers, Body: utils.ConvertObjectToJSON(resp)}, nil
 }
 
+func handleKudosReport(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
+	kudosFilter := service.ConvertToKudosReportFilter(slackCommand)
+	ret, err := repo.GetKudosReport(ctx, kudosFilter)
+	if err != nil {
+		return nil, err
+	}
+	reportRet := service.BuildSlackResponseForReport(ret)
+	return reportRet, nil
+}
 func handleKudosCommand(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
 	// return MyResponse{Message: fmt.Sprintf("%s is %d years old!", event.Name, event.Age)}, nil
 	kudosData := service.ConvertToKudosData(slackCommand)
@@ -82,11 +93,6 @@ func handleKudosCommand(ctx *model.MyContext, slackCommand *slackmodel.SlackComm
 	return service.BuildSlackResponse(kudosData), nil
 }
 
-func handleKudosReport(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
-	//read this week, last week, this month
-
-	return nil, nil
-}
 func main() {
 	log.Println("Started Slack Kudos App")
 	initEnvironment()

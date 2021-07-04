@@ -11,6 +11,7 @@ type KudosCommand struct {
 	Text         string    `json:"text"`
 	Timestamp    int64     `json:"timestamp"`
 	UserId       string    `json:"userId"`
+	Username     string    `json:"username"`
 	MsgId        string    `json:"msgId"`
 	SourceUserId string    `json:"sourceUserId"`
 	Ttl          int64     `json:"ttl"`
@@ -21,9 +22,10 @@ type KudosCounter struct {
 	Id1       string    `json:"id1"` //teamId#report
 	Id2       string    `json:"id2"` //<weekNumber | monthNumber>#userId
 	Timestamp int64     `json:"timestamp"`
-	Count     int64     `json:"count"`
+	Count     int       `json:"count"`
 	UserId    string    `json:"userId"`
 	Type      KudosType `json:"type"`
+	Username  string    `json:"username"`
 }
 
 type KudosType string

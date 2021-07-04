@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -22,7 +23,7 @@ type KudosData struct {
 	SourceUserId  string
 	Text          string
 	ApiAppId      *string
-	TargetUserIds []string
+	TargetUserIds []*UserNameIdMapping
 	MessageId     string
 	ResponseUrl   string
 	AppId         AppId
@@ -34,6 +35,7 @@ type KudosCountUpdate struct {
 	UserId    string
 	Timestamp int64
 	Counter   int
+	Username  string
 }
 
 type AppId string
@@ -52,3 +54,33 @@ type MyContext struct {
 	Username               string
 	Testing                bool
 }
+
+type UserNameIdMapping struct {
+	Username string
+	UserId   string
+}
+
+type KudosReportFilter struct {
+	TeamId     string     `json:"teamId"`
+	UserIds    []string   `json:"userIds"`
+	ReportTime ReportTime `json:"reportTime"`
+}
+
+type KudosReportResult struct {
+	FromTime   time.Time                `json:"fromTime"`
+	ToTime     time.Time                `json:"toTime"`
+	UserReport []*KudosUserReportResult `json:"userReport"`
+}
+type KudosUserReportResult struct {
+	UserId   string `json:"userId"`
+	Username string `json:"username"`
+	Total    int    `json:"total"`
+}
+type ReportTime string
+
+const (
+	THIS_MONTH ReportTime = "THIS_MONTH"
+	LAST_MONTH ReportTime = "LAST_MONTH"
+	THIS_WEEK  ReportTime = "THIS_WEEK"
+	LAST_WEEK  ReportTime = "LAST_WEEK"
+)

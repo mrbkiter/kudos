@@ -59,6 +59,7 @@ func handler(ctx context.Context, ddbEvent events.DynamoDBEvent) error {
 	myCtx := utils.NewMyContext(context.Background(), "")
 	myCtx.GlobalConfig = globalConfig
 	myCtx.Log.Infow("Payload", "event", ddbEvent)
+
 	for _, record := range ddbEvent.Records {
 		// newctx.Log.Infof("[%s %s], old = %s, new = %s", record.EventName, record.Change.Keys, record.Change.OldImage, record.Change.NewImage)
 		oldData := new(ddb_entity.KudosCommand)
@@ -73,6 +74,7 @@ func handler(ctx context.Context, ddbEvent events.DynamoDBEvent) error {
 				//add new
 				counter := new(model.KudosCountUpdate)
 				counter.Counter = 1
+				counter.Username = newData.Username
 				counter.TeamId = newData.TeamId
 				counter.UserId = newData.UserId
 				counter.Timestamp = newData.Timestamp
@@ -84,6 +86,7 @@ func handler(ctx context.Context, ddbEvent events.DynamoDBEvent) error {
 				counter.TeamId = oldData.TeamId
 				counter.UserId = oldData.UserId
 				counter.Timestamp = oldData.Timestamp
+				counter.Username = oldData.Username
 				repo.IncreaseKudosCounter(myCtx, counter)
 			}
 

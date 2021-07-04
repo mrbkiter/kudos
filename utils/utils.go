@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -78,20 +79,40 @@ func ValidateDateTimeFormatISO(dateValue string) bool {
 }
 
 var textUserIdCoveredRegex = regexp.MustCompile(`<[A-Za-z0-9@|]*>|@[^ ]*`)
-var userIdRegex = regexp.MustCompile(`[^@<>|]+`)
+var userIdRegex = regexp.MustCompile(`[^@<>]+`)
 
-func ExtractUserIdsFromText(text string) []string {
+func ExtractReportTime(text string) model.ReportTime {
+	if strings.Contains(text, string(model.LAST_MONTH)) {
+		return model.LAST_MONTH
+	} else if strings.Contains(text, string(model.LAST_WEEK)) {
+		return model.LAST_WEEK
+	} else if strings.Contains(text, string(model.THIS_MONTH)) {
+		return model.THIS_MONTH
+	} else {
+		return model.THIS_WEEK
+	}
+}
+
+func ExtractUserIdsFromText(text string) []*model.UserNameIdMapping {
 	// userIds := textUserIdRegex.FindAllString(text, -1)
-	userIdSet := make(map[string]bool)
+	userIdSet := make(map[string]string)
 	userIds := textUserIdCoveredRegex.FindAllString(text, -1)
 	for _, userId := range userIds {
 		userId1 := userIdRegex.FindAllString(userId, 1)[0]
-		userIdSet[userId1] = true
+		userIdMapping := strings.Split(userId1, "|")
+		if len(userIdMapping) == 2 {
+			userIdSet[userIdMapping[0]] = userIdMapping[1]
+		} else {
+			userIdSet[userIdMapping[0]] = userIdMapping[0]
+		}
 
 	}
-	v := make([]string, 0, len(userIdSet))
-	for userId, _ := range userIdSet {
-		v = append(v, userId)
+	v := make([]*model.UserNameIdMapping, 0, len(userIdSet))
+	for userId, userName := range userIdSet {
+		v = append(v, &model.UserNameIdMapping{
+			Username: userName,
+			UserId:   userId,
+		})
 	}
 	return v
 }
@@ -127,4 +148,22 @@ func UnmarshalStreamImage(attribute map[string]events.DynamoDBAttributeValue, ou
 
 	return dynamodbattribute.UnmarshalMap(dbAttrMap, out)
 
+}
+
+func WeekStart(year, week int) time.Time {
+	// Start from the middle of the year:
+	t := time.Date(year, 7, 1, 0, 0, 0, 0, time.UTC)
+
+	// Roll back to Monday:
+	if wd := t.Weekday(); wd == time.Sunday {
+		t = t.AddDate(0, 0, -6)
+	} else {
+		t = t.AddDate(0, 0, -int(wd)+1)
+	}
+
+	// Difference in weeks:
+	_, w := t.ISOWeek()
+	t = t.AddDate(0, 0, (week-w)*7)
+
+	return t
 }

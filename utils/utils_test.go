@@ -12,7 +12,7 @@ func Test_ExtractUserIdsFromText(t *testing.T) {
 	if len(userIds) != 3 {
 		t.Error("Errror when extracting userIds")
 	}
-	if userIds[0] != "U012ABCDEF" || userIds[2] != "U345GHIJKL" || userIds[1] != "mrbkiter" {
+	if userIds[0].UserId != "U012ABCDEF" || userIds[2].UserId != "U345GHIJKL" || userIds[1].UserId != "mrbkiter" {
 		t.Error("Incorrectly extract user id")
 	}
 }

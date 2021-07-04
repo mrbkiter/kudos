@@ -2,6 +2,7 @@ package repos
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"kudos-app.github.com/ddb_entity"
 	"kudos-app.github.com/model"
+	"kudos-app.github.com/utils"
 )
 
 type DDBInterface interface {
@@ -23,6 +25,7 @@ type DDBInterface interface {
 type Repo interface {
 	WriteKudosCommand(ctx *model.MyContext, data *model.KudosData) error
 	IncreaseKudosCounter(ctx *model.MyContext, data *model.KudosCountUpdate) error
+	GetKudosReport(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportResult, error)
 }
 
 type DDBRepo struct {
@@ -30,29 +33,146 @@ type DDBRepo struct {
 	Ddb DDBInterface
 }
 
-func (me *DDBRepo) IncreaseKudosCounter(ctx *model.MyContext, data *model.KudosCountUpdate) error {
-	id1 := buildPartitionKey(data.TeamId, string(ddb_entity.ReportType))
-	timestamp := time.Unix(0, data.Timestamp*int64(time.Millisecond))
+func (me *DDBRepo) GetKudosReport(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportResult, error) {
+	id1 := buildPartitionKey(filter.TeamId, "report")
+	q := &dynamodb.QueryInput{
+		TableName:              aws.String(ctx.GlobalConfig.Ddb.TableName),
+		KeyConditionExpression: utils.String("id1 = :id1"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":id1": {
+				S: utils.String(id1),
+			},
+		},
+		Limit: utils.Int64(500),
+	}
+	timeFilter := "%v#"
 
-	//build 2 counter
+	calculatedTime := time.Now()
+	fromTime := time.Now()
+	toTime := time.Now()
+
+	switch filter.ReportTime {
+	case model.THIS_MONTH:
+		fromTime = time.Date(calculatedTime.Year(), calculatedTime.Month(), 1, 0, 0, 0, 0, time.UTC)
+		toTime = time.Now()
+		monthFormat := calculatedTime.Format("2006-01")
+		timeFilter = fmt.Sprintf(timeFilter, monthFormat)
+	case model.THIS_WEEK:
+		fromTime = utils.WeekStart(calculatedTime.UTC().ISOWeek())
+		toTime = time.Now()
+		yearNumber, weekNumber := calculatedTime.ISOWeek()
+		id2WeekNumber := buildPartitionKey(fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
+		timeFilter = fmt.Sprintf(timeFilter, id2WeekNumber)
+	case model.LAST_MONTH:
+		calculatedTime = calculatedTime.AddDate(0, -1, 0)
+		fromTime = time.Date(calculatedTime.Year(), calculatedTime.Month(), 1, 0, 0, 0, 0, time.UTC)
+		toTime = calculatedTime.AddDate(0, 1, -1)
+		monthFormat := calculatedTime.Format("2006-01")
+		timeFilter = fmt.Sprintf(timeFilter, monthFormat)
+	case model.LAST_WEEK:
+		calculatedTime = calculatedTime.Local().AddDate(0, 0, -7)
+		fromTime = utils.WeekStart(calculatedTime.UTC().ISOWeek())
+		toTime = calculatedTime
+		yearNumber, weekNumber := calculatedTime.ISOWeek()
+		id2WeekNumber := buildPartitionKey(fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
+		timeFilter = fmt.Sprintf(timeFilter, id2WeekNumber)
+	}
+	if len(filter.UserIds) > 0 { //get specific users
+		q.KeyConditionExpression = aws.String(fmt.Sprintf("%v AND begins_with(id2, :filterTime)", *q.KeyConditionExpression))
+		q.ExpressionAttributeValues[":filterTime"] = &dynamodb.AttributeValue{
+			S: utils.String(timeFilter),
+		}
+
+		userFilterExpr := `userId = %v`
+		filterExpr := ""
+		q.FilterExpression = aws.String("")
+		for idx, id := range filter.UserIds {
+			attrValue := fmt.Sprintf(":userId%v", idx)
+			q.ExpressionAttributeValues[attrValue] = &dynamodb.AttributeValue{
+				S: utils.String(id),
+			}
+			if idx == 0 {
+				filterExpr = fmt.Sprintf(userFilterExpr, attrValue)
+			} else {
+				filterExpr = filterExpr + " OR " + fmt.Sprintf(userFilterExpr, attrValue)
+			}
+		}
+		q.FilterExpression = aws.String(filterExpr)
+	} else {
+		q.KeyConditionExpression = aws.String(fmt.Sprintf("%v AND begins_with(id2, :filterTime)", *q.KeyConditionExpression))
+		q.ExpressionAttributeValues[":filterTime"] = &dynamodb.AttributeValue{
+			S: utils.String(timeFilter),
+		}
+	}
+
+	output, err := me.Ddb.Query(q)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := new(model.KudosReportResult)
+	ret.FromTime = fromTime
+	ret.ToTime = toTime
+
+	if len(output.Items) > 0 {
+		kudosUserReport := make([]*ddb_entity.KudosCounter, 0)
+		err = dynamodbattribute.UnmarshalListOfMaps(output.Items, &kudosUserReport)
+		if err != nil {
+			return nil, err
+		}
+		//convert
+		result := make([]*model.KudosUserReportResult, 0)
+		for _, r := range kudosUserReport {
+			row := &model.KudosUserReportResult{
+				UserId:   r.UserId,
+				Total:    r.Count,
+				Username: r.Username,
+			}
+			result = append(result, row)
+		}
+		sort.SliceStable(result, func(i, j int) bool {
+			return result[i].Total >= result[j].Total
+		})
+		ret.UserReport = result
+		return ret, nil
+	}
+	return ret, nil
+}
+
+func BuildIdMonthAndWeek(timestampInSec int64, userId string) (string, string) {
+	timestamp := time.Unix(timestampInSec, 0)
 	monthFormat := timestamp.Format("2006-01")
 	yearNumber, weekNumber := timestamp.ISOWeek()
-	id2Month := buildPartitionKey(data.UserId, monthFormat)
-	id2WeekNumber := buildPartitionKey(data.UserId, fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
+	id2Month := buildPartitionKey(monthFormat, userId)
+	id2WeekNumber := buildPartitionKey(fmt.Sprint(yearNumber), fmt.Sprint(weekNumber), userId)
+	return id2Month, id2WeekNumber
+}
+
+func (me *DDBRepo) IncreaseKudosCounter(ctx *model.MyContext, data *model.KudosCountUpdate) error {
+	id1 := buildPartitionKey(data.TeamId, string(ddb_entity.ReportType))
+	id2Month, id2WeekNumber := BuildIdMonthAndWeek(data.Timestamp, data.UserId)
+	// timestamp := time.Unix(data.Timestamp, 0)
+
+	// //build 2 counter
+	// monthFormat := timestamp.Format("2006-01")
+	// yearNumber, weekNumber := timestamp.ISOWeek()
+	// id2Month := buildPartitionKey(monthFormat, data.UserId)
+	// id2WeekNumber := buildPartitionKey(fmt.Sprint(yearNumber), fmt.Sprint(weekNumber), data.UserId)
 
 	transactInputs := &dynamodb.TransactWriteItemsInput{}
 
-	monthInput := buildTransactionUpdateItem(ctx, id1, id2Month, data.Counter)
-	weekInput := buildTransactionUpdateItem(ctx, id1, id2WeekNumber, data.Counter)
+	monthInput := buildTransactionUpdateItem(ctx, id1, id2Month, data)
+	weekInput := buildTransactionUpdateItem(ctx, id1, id2WeekNumber, data)
 	transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 2)
 	transactInputs.TransactItems[0] = monthInput
 	transactInputs.TransactItems[1] = weekInput
 
 	_, err := me.Ddb.TransactWriteItems(transactInputs)
 	if err != nil {
+		ctx.Log.Warnw("Error when writing counter", "err", err)
 		//need to check if err is from record not exists
-		putMonthInput := buildTransactionPutItem(ctx, id1, id2Month, data.Counter)
-		putWeekInput := buildTransactionPutItem(ctx, id1, id2WeekNumber, data.Counter)
+		putMonthInput := buildTransactionPutItem(ctx, id1, id2Month, data)
+		putWeekInput := buildTransactionPutItem(ctx, id1, id2WeekNumber, data)
 		transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 2)
 		transactInputs.TransactItems[0] = putMonthInput
 		transactInputs.TransactItems[1] = putWeekInput
@@ -63,35 +183,42 @@ func (me *DDBRepo) IncreaseKudosCounter(ctx *model.MyContext, data *model.KudosC
 	return err
 }
 
-func buildTransactionUpdateItem(ctx *model.MyContext, id1 string, id2 string, counter int) *dynamodb.TransactWriteItem {
+func buildTransactionUpdateItem(ctx *model.MyContext, id1 string, id2 string, counter *model.KudosCountUpdate) *dynamodb.TransactWriteItem {
 	return &dynamodb.TransactWriteItem{
 		Update: &dynamodb.Update{
 			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 				":val": {
-					N: aws.String(fmt.Sprintf("%v", counter)),
+					N: aws.String(fmt.Sprintf("%v", counter.Counter)),
+				},
+				":userId": {
+					S: aws.String(counter.UserId),
+				},
+				":username": {
+					S: aws.String(counter.Username),
+				},
+				":teamId": {
+					S: aws.String(counter.TeamId),
 				},
 			},
 			TableName: aws.String(ctx.GlobalConfig.Ddb.TableName),
 			Key: map[string]*dynamodb.AttributeValue{
 				"id1": {
-					N: aws.String(id1),
+					S: aws.String(id1),
 				},
 				"id2": {
 					S: aws.String(id2),
 				},
 			},
-			UpdateExpression: aws.String("set count = count + :val"),
+			ExpressionAttributeNames: map[string]*string{
+				"#count": aws.String("count"),
+			},
+			UpdateExpression: aws.String("set #count = #count + :val, userId=:userId, username = :username, teamId = :teamId"),
 		},
 	}
 }
-func buildTransactionPutItem(ctx *model.MyContext, id1 string, id2 string, counter int) *dynamodb.TransactWriteItem {
+func buildTransactionPutItem(ctx *model.MyContext, id1 string, id2 string, counter *model.KudosCountUpdate) *dynamodb.TransactWriteItem {
 	return &dynamodb.TransactWriteItem{
 		Put: &dynamodb.Put{
-			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-				":val": {
-					N: aws.String(string(counter)),
-				},
-			},
 			TableName: aws.String(ctx.GlobalConfig.Ddb.TableName),
 			Item: map[string]*dynamodb.AttributeValue{
 				"id1": {
@@ -101,7 +228,16 @@ func buildTransactionPutItem(ctx *model.MyContext, id1 string, id2 string, count
 					S: aws.String(id2),
 				},
 				"count": {
-					N: aws.String(fmt.Sprintf("%v", counter)),
+					N: aws.String(fmt.Sprintf("%v", counter.Counter)),
+				},
+				"username": {
+					S: aws.String(counter.Username),
+				},
+				"teamId": {
+					S: aws.String(counter.TeamId),
+				},
+				"userId": {
+					S: aws.String(counter.UserId),
 				},
 			},
 		},
@@ -152,15 +288,17 @@ func MapKudosDataToKudosCommandEtt(data *model.KudosData) []*ddb_entity.KudosCom
 		ett := new(ddb_entity.KudosCommand)
 		ett.Type = ddb_entity.CommandType
 		ett.ChannelId = data.ChannelId
-		ett.Id1 = buildPartitionKey(data.TeamId, targetUserId)
+		ett.Id1 = buildPartitionKey(data.TeamId, targetUserId.UserId)
 		ett.Id2 = data.MessageId
 		ett.SourceUserId = data.SourceUserId
 		ett.Text = data.Text
-		ett.UserId = targetUserId
+		ett.UserId = targetUserId.UserId
+		ett.Username = targetUserId.Username
 		ett.TeamId = data.TeamId
 		ett.MsgId = data.MessageId
 		ett.Timestamp = now
 		ett.Ttl = ttl
+		ett.Username = targetUserId.Username
 		ett.TeamIdWeek = buildPartitionKey(data.TeamId, fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
 		ett.TeamIdMonth = buildPartitionKey(data.TeamId, monthFormat)
 		commands = append(commands, ett)

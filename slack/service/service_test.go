@@ -27,8 +27,8 @@ func Test_convertAwsRequestToSlackCommandRequest(t *testing.T) {
 
 func Test_BuildSlackResponse(t *testing.T) {
 	kudos := new(model.KudosData)
-	targetUserIds := make([]string, 0)
-	targetUserIds = append(targetUserIds, "tgUserId1", "tgUserId2")
+	targetUserIds := make([]*model.UserNameIdMapping, 0)
+	targetUserIds = append(targetUserIds, &model.UserNameIdMapping{UserId: "tgUserId1"}, &model.UserNameIdMapping{UserId: "tgUserId2"})
 	kudos.TargetUserIds = targetUserIds
 	kudos.SourceUserId = "sourceUserId"
 	kudos.Text = "This is new comment from abc"
@@ -42,7 +42,7 @@ func Test_BuildSlackResponse(t *testing.T) {
 
 func Test_BuildSlackResponse0(t *testing.T) {
 	kudos := new(model.KudosData)
-	targetUserIds := make([]string, 0)
+	targetUserIds := make([]*model.UserNameIdMapping, 0)
 	kudos.TargetUserIds = targetUserIds
 	kudos.SourceUserId = "sourceUserId"
 	kudos.Text = "This is new comment from abc"
