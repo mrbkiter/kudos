@@ -1,5 +1,7 @@
 # kudos
 
+Kudos is the simple and easy to use employee recognition software that enhances employee engagement and team communication. The first version (0.0.1) is integration with Slack chat which includes /kudos and /kudos-report commands
+
 ## Syntax
 
 There are 2 supported commands: 
