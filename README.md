@@ -4,11 +4,11 @@
 
 There are 2 supported commands: 
 
-``**/kudos** Thanks @mrbkiter, @abc for great support``
+``/kudos Thanks @mrbkiter, @abc for great support``
 
 This command would kudos mrbkiter and abc. It would increase +1 for each 
 
-``**/kudos-report** <THIS_MONTH | LAST_MONTH | THIS_WEEK | LAST_WEEK> @mrbkiter @abc ``
+``/kudos-report <THIS_MONTH | LAST_MONTH | THIS_WEEK | LAST_WEEK> @mrbkiter @abc ``
 
 This command would return report for mrbkiter and abc (in case you input empty, it would return all user report). There are 4 report time types: THIS_MONTH, LAST_MONTH, THIS_WEEK, LAST_WEEK (default is THIS_WEEK) The result is returned in desc order
 
