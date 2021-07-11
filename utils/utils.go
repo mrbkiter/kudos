@@ -93,6 +93,13 @@ func ExtractReportTime(text string) model.ReportTime {
 	}
 }
 
+func ExtractReportType(text string) model.ReportType {
+	if strings.HasPrefix(text, string(model.Report_detail)) {
+		return model.Report_detail
+	}
+	return model.Report_aggregate
+}
+
 func ExtractUserIdsFromText(text string) []*model.UserNameIdMapping {
 	// userIds := textUserIdRegex.FindAllString(text, -1)
 	userIdSet := make(map[string]string)

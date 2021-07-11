@@ -113,3 +113,33 @@ func Test_GetUserReport(t *testing.T) {
 		t.Errorf("Report length should be 1")
 	}
 }
+
+func Test_GetUserReportDetail(t *testing.T) {
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String("ap-southeast-1"),
+	}))
+	awsConfig := &aws.Config{}
+	ddb := dynamodb.New(sess, awsConfig)
+	ddbRepo := new(repos.DDBRepo)
+	ddbRepo.Ddb = ddb
+
+	myCtx := utils.NewMyContext(context.Background(), "")
+	globalConfig := new(model.GlobalConfig)
+	globalConfig.Ddb = model.DynamoConfig{
+		Region:    "ap-southeast-1",
+		TableName: "dev-kudos",
+	}
+	myCtx.GlobalConfig = globalConfig
+	data := new(model.KudosReportFilter)
+	data.TeamId = "T022PA5N7KP"
+	data.ReportTime = model.THIS_MONTH
+	userIds := make([]string, 1)
+	userIds[0] = "U024D6VQX7Z"
+	data.UserIds = userIds
+	ret, err := ddbRepo.GetKudosReportDetails(myCtx, data)
+	if err != nil {
+		t.Errorf(fmt.Sprintf("Error %v when getting kudos report detail", err.Error()))
+	} else if len(ret.KudosTalk) < 1 {
+		t.Errorf("Report detail length should be > 0")
+	}
+}

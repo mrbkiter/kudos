@@ -73,14 +73,25 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func handleKudosReport(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
-	kudosFilter := service.ConvertToKudosReportFilter(slackCommand)
-	ret, err := repo.GetKudosReport(ctx, kudosFilter)
-	if err != nil {
-		return nil, err
+	kudosFilter, reportType := service.ConvertToKudosReportFilter(slackCommand)
+	reportRet := new(slackmodel.SlackResponse)
+	if reportType == model.Report_detail {
+		ret, err := repo.GetKudosReportDetails(ctx, kudosFilter)
+		if err != nil {
+			return nil, err
+		}
+		reportRet = service.BuildSlackResponseForReportDetail(ret)
+	} else {
+		ret, err := repo.GetKudosReport(ctx, kudosFilter)
+		if err != nil {
+			return nil, err
+		}
+		reportRet = service.BuildSlackResponseForReport(ret)
 	}
-	reportRet := service.BuildSlackResponseForReport(ret)
+
 	return reportRet, nil
 }
+
 func handleKudosCommand(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
 	// return MyResponse{Message: fmt.Sprintf("%s is %d years old!", event.Name, event.Age)}, nil
 	kudosData := service.ConvertToKudosData(slackCommand)

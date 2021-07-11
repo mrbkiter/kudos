@@ -13,6 +13,7 @@ type SlackCommandRequest struct {
 	ResponseUrl    *string `json:"response_url"`
 	TriggerId      *string `json:"trigger_id"`
 	ApiAppId       *string `json:"api_app_id"`
+	Username       *string `json:"user_name"`
 }
 
 type SlackResponse struct {

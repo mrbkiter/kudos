@@ -3,6 +3,7 @@ package service
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/joncalhoun/qson"
@@ -24,7 +25,7 @@ func ConvertAwsRequestToSlackCommandRequest(request events.APIGatewayProxyReques
 	qson.Unmarshal(req, string(bodyForm))
 	return req
 }
-func ConvertToKudosReportFilter(slackCommand *slackmodel.SlackCommandRequest) *model.KudosReportFilter {
+func ConvertToKudosReportFilter(slackCommand *slackmodel.SlackCommandRequest) (*model.KudosReportFilter, model.ReportType) {
 	filter := new(model.KudosReportFilter)
 	filter.TeamId = *slackCommand.TeamId
 	userIdMappings := utils.ExtractUserIdsFromText(*slackCommand.Text)
@@ -34,7 +35,8 @@ func ConvertToKudosReportFilter(slackCommand *slackmodel.SlackCommandRequest) *m
 	}
 	filter.UserIds = userIds
 	filter.ReportTime = utils.ExtractReportTime(*slackCommand.Text)
-	return filter
+	reportType := utils.ExtractReportType(*slackCommand.Text)
+	return filter, reportType
 }
 
 func ConvertToKudosData(slackCommand *slackmodel.SlackCommandRequest) *model.KudosData {
@@ -49,9 +51,30 @@ func ConvertToKudosData(slackCommand *slackmodel.SlackCommandRequest) *model.Kud
 	ret.Text = *slackCommand.Command + " " + *slackCommand.Text
 	ret.TargetUserIds = utils.ExtractUserIdsFromText(*slackCommand.Text)
 	ret.AppId = model.Slack
+	ret.Username = *slackCommand.Username
 	return ret
 }
 
+func BuildSlackResponseForReportDetail(reportDetail *model.KudosReportDetails) *slackmodel.SlackResponse {
+	slackResp := new(slackmodel.SlackResponse)
+	slackResp.ResponseType = slackmodel.In_channel
+	if len(reportDetail.KudosTalk) == 0 {
+		slackResp.Text = "No report found"
+		return slackResp
+	}
+	slackResp.Blocks = make([]*slackmodel.BlockSection, 0)
+	for _, tgId := range reportDetail.KudosTalk {
+		targetUserTag := BuildUserTag(tgId.UserId)
+		block := new(slackmodel.BlockSection)
+		block.Type = utils.String("section")
+		block.Text = new(slackmodel.TextSection)
+		block.Text.Type = "mrkdwn"
+		block.Text.Text = fmt.Sprintf("%v: %v (%v)", targetUserTag, tgId.Text, tgId.Timestamp.Format(time.RFC822))
+		slackResp.Blocks = append(slackResp.Blocks, block)
+	}
+
+	return slackResp
+}
 func BuildSlackResponseForReport(kudosReportRet *model.KudosReportResult) *slackmodel.SlackResponse {
 	slackResp := new(slackmodel.SlackResponse)
 	slackResp.ResponseType = slackmodel.In_channel

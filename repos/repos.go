@@ -1,6 +1,7 @@
 package repos
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -26,6 +27,7 @@ type Repo interface {
 	WriteKudosCommand(ctx *model.MyContext, data *model.KudosData) error
 	IncreaseKudosCounter(ctx *model.MyContext, data *model.KudosCountUpdate) error
 	GetKudosReport(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportResult, error)
+	GetKudosReportDetails(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportDetails, error)
 }
 
 type DDBRepo struct {
@@ -33,6 +35,88 @@ type DDBRepo struct {
 	Ddb DDBInterface
 }
 
+func (me *DDBRepo) GetKudosReportDetails(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportDetails, error) {
+	if len(filter.UserIds) != 1 {
+		return nil, errors.New("Only 1 user accepted at one time")
+	}
+	calculatedTime := time.Now()
+	id1 := ""
+	indexName := ""
+	id1AttrName := ""
+	switch filter.ReportTime {
+	case model.THIS_MONTH:
+		monthFormat := calculatedTime.Format("2006-01")
+		id1 = buildPartitionKey(filter.TeamId, monthFormat)
+		indexName = "teamIdMonth-userId-index"
+		id1AttrName = "teamIdMonth"
+	case model.LAST_MONTH:
+		calculatedTime = calculatedTime.AddDate(0, -1, 0)
+		monthFormat := calculatedTime.Format("2006-01")
+		id1 = buildPartitionKey(filter.TeamId, monthFormat)
+		indexName = "teamIdMonth-userId-index"
+		id1AttrName = "teamIdMonth"
+	case model.LAST_WEEK:
+		calculatedTime = calculatedTime.Local().AddDate(0, 0, -7)
+		yearNumber, weekNumber := calculatedTime.ISOWeek()
+		id1 = buildPartitionKey(filter.TeamId, fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
+		indexName = "teamIdWeek-userId-index"
+		id1AttrName = "teamIdWeek"
+	case model.THIS_WEEK:
+		yearNumber, weekNumber := calculatedTime.ISOWeek()
+		id1 = buildPartitionKey(filter.TeamId, fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
+		indexName = "teamIdWeek-userId-index"
+		id1AttrName = "teamIdWeek"
+	}
+
+	q := &dynamodb.QueryInput{
+		TableName:              aws.String(ctx.GlobalConfig.Ddb.TableName),
+		KeyConditionExpression: utils.String("#id1 = :id1 AND userId = :userId"),
+		IndexName:              aws.String(indexName),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":id1": {
+				S: utils.String(id1),
+			},
+			":userId": {
+				S: utils.String(filter.UserIds[0]),
+			},
+			":type": {
+				S: utils.String("command"),
+			},
+		},
+		ExpressionAttributeNames: map[string]*string{
+			"#id1":  aws.String(id1AttrName),
+			"#type": aws.String("type"),
+		},
+		FilterExpression: aws.String("#type = :type"),
+		Limit:            utils.Int64(500),
+	}
+	output, err := me.Ddb.Query(q)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := new(model.KudosReportDetails)
+
+	if len(output.Items) > 0 {
+		kudosCommands := make([]*ddb_entity.KudosCommand, 0)
+		err = dynamodbattribute.UnmarshalListOfMaps(output.Items, &kudosCommands)
+		if err != nil {
+			return nil, err
+		}
+		ret.UserId = filter.UserIds[0]
+
+		ret.KudosTalk = make([]*model.KudosSimpleCommand, 0)
+		for _, cmd := range kudosCommands {
+			simpleCmd := new(model.KudosSimpleCommand)
+			simpleCmd.Text = cmd.Text
+			simpleCmd.UserId = cmd.UserId
+			simpleCmd.Timestamp = time.Unix(cmd.Timestamp, 0)
+			ret.KudosTalk = append(ret.KudosTalk, simpleCmd)
+		}
+	}
+	return ret, nil
+
+}
 func (me *DDBRepo) GetKudosReport(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportResult, error) {
 	id1 := buildPartitionKey(filter.TeamId, "report")
 	q := &dynamodb.QueryInput{
@@ -301,6 +385,7 @@ func MapKudosDataToKudosCommandEtt(data *model.KudosData) []*ddb_entity.KudosCom
 		ett.Username = targetUserId.Username
 		ett.TeamIdWeek = buildPartitionKey(data.TeamId, fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
 		ett.TeamIdMonth = buildPartitionKey(data.TeamId, monthFormat)
+		ett.SourceUserName = data.Username
 		commands = append(commands, ett)
 	}
 	return commands

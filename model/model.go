@@ -76,6 +76,18 @@ type KudosUserReportResult struct {
 	Username string `json:"username"`
 	Total    int    `json:"total"`
 }
+
+type KudosReportDetails struct {
+	UserId    string                `json:"userId"`
+	Username  string                `json:"username"`
+	KudosTalk []*KudosSimpleCommand `json:"talks"`
+}
+
+type KudosSimpleCommand struct {
+	Text      string
+	UserId    string
+	Timestamp time.Time
+}
 type ReportTime string
 
 const (
@@ -83,4 +95,11 @@ const (
 	LAST_MONTH ReportTime = "LAST_MONTH"
 	THIS_WEEK  ReportTime = "THIS_WEEK"
 	LAST_WEEK  ReportTime = "LAST_WEEK"
+)
+
+type ReportType string
+
+const (
+	Report_detail    ReportType = "detail"
+	Report_aggregate ReportType = "aggregate"
 )

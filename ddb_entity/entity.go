@@ -8,14 +8,15 @@ type KudosCommand struct {
 	TeamId      string `json:"teamId"`
 	ChannelId   string `json:"channelId"`
 	// Command         string `json:"command"`
-	Text         string    `json:"text"`
-	Timestamp    int64     `json:"timestamp"`
-	UserId       string    `json:"userId"`
-	Username     string    `json:"username"`
-	MsgId        string    `json:"msgId"`
-	SourceUserId string    `json:"sourceUserId"`
-	Ttl          int64     `json:"ttl"`
-	Type         KudosType `json:"type"`
+	Text           string    `json:"text"`
+	Timestamp      int64     `json:"timestamp"`
+	UserId         string    `json:"userId"`
+	Username       string    `json:"username"`
+	MsgId          string    `json:"msgId"`
+	SourceUserId   string    `json:"sourceUserId"`
+	SourceUserName string    `json:"sourceUsername"`
+	Ttl            int64     `json:"ttl"`
+	Type           KudosType `json:"type"`
 }
 
 type KudosCounter struct {
