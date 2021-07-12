@@ -109,10 +109,13 @@ func (me *DDBRepo) GetKudosReportDetails(ctx *model.MyContext, filter *model.Kud
 		for _, cmd := range kudosCommands {
 			simpleCmd := new(model.KudosSimpleCommand)
 			simpleCmd.Text = cmd.Text
-			simpleCmd.UserId = cmd.UserId
+			simpleCmd.UserId = cmd.SourceUserId
 			simpleCmd.Timestamp = time.Unix(cmd.Timestamp, 0)
 			ret.KudosTalk = append(ret.KudosTalk, simpleCmd)
 		}
+		sort.SliceStable(ret.KudosTalk, func(i, j int) bool {
+			return ret.KudosTalk[i].Timestamp.After(ret.KudosTalk[j].Timestamp)
+		})
 	}
 	return ret, nil
 
