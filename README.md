@@ -4,7 +4,7 @@ Kudos is the simple and easy to use employee recognition software that enhances 
 
 ## Syntax
 
-There are 2 supported commands: 
+There are 3 supported commands: 
 
 ``/kudos Thanks @mrbkiter, @abc for great support``
 
@@ -13,6 +13,10 @@ This command would kudos mrbkiter and abc. It would increase +1 for each
 ``/kudos-report <THIS_MONTH | LAST_MONTH | THIS_WEEK | LAST_WEEK> @mrbkiter @abc ``
 
 This command would return report for mrbkiter and abc (in case you input empty, it would return all user report). There are 4 report time types: THIS_MONTH, LAST_MONTH, THIS_WEEK, LAST_WEEK (default is THIS_WEEK) The result is returned in desc order
+
+``/kudos-report detail @mrbkiter THIS_MONTH`` 
+
+This command would return report detail for mrbkiter in this month. 
 
 ## The Architecture
 
@@ -88,6 +92,9 @@ If you need to extend your business, there are more rooms for you (we store team
  ### Lambda Function
   
 As explained above, you would need 2 functions: slack integration and report builder func (slack and report folders respectively). The API Gateway should attach to slack integration function. 
+  
+  The lambda function would need starting with PROFILE=<your-profile>. If you take a look config folder, your settings would be placed in config file under pattern: config-<your_profile>.json. For example, if you start your lambda function with PROFILE=test, the function would find settings from file config-test.json in config folder. 
+  
   
   ### Slack configuration 
 
