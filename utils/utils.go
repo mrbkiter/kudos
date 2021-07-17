@@ -78,7 +78,7 @@ func ValidateDateTimeFormatISO(dateValue string) bool {
 	return true
 }
 
-var textUserIdCoveredRegex = regexp.MustCompile(`<[A-Za-z0-9@|]*>|@[^ ]*`)
+var textUserIdCoveredRegex = regexp.MustCompile(`<[^<>]*>|@[^ ]*`)
 var userIdRegex = regexp.MustCompile(`[^@<>]+`)
 
 func ExtractReportTime(text string) model.ReportTime {
@@ -100,7 +100,7 @@ func ExtractReportType(text string) model.ReportType {
 	return model.Report_aggregate
 }
 
-func ExtractUserIdsFromText(text string) []*model.UserNameIdMapping {
+func ExtractUserIdsFromText(text string, excludedUserId string) []*model.UserNameIdMapping {
 	// userIds := textUserIdRegex.FindAllString(text, -1)
 	userIdSet := make(map[string]string)
 	userIds := textUserIdCoveredRegex.FindAllString(text, -1)
@@ -116,12 +116,22 @@ func ExtractUserIdsFromText(text string) []*model.UserNameIdMapping {
 	}
 	v := make([]*model.UserNameIdMapping, 0, len(userIdSet))
 	for userId, userName := range userIdSet {
-		v = append(v, &model.UserNameIdMapping{
-			Username: userName,
-			UserId:   userId,
-		})
+		if userId != excludedUserId {
+			v = append(v, &model.UserNameIdMapping{
+				Username: userName,
+				UserId:   userId,
+			})
+		}
 	}
 	return v
+}
+
+func AnalyzeKudosText(text string) string {
+	rg := regexp.MustCompile(`(?i)^((thanks|great|good|thank|kudos)[^<>]*|\s*)((<[^<>]*>)+\s*)+`)
+
+	matching := rg.FindString(text)
+
+	return matching
 }
 
 func ReadFile(fileName string) (string, error) {

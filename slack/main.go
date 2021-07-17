@@ -57,9 +57,9 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	myCtx.Log.Infow("Converted Request", "request", req)
 	resp := new(slackmodel.SlackResponse)
 	var err error
-	if *req.Command == "/kudos" {
+	if req.Command == "/kudos" {
 		resp, err = handleKudosCommand(myCtx, req)
-	} else if *req.Command == "/kudos-report" {
+	} else if req.Command == "/kudos-report" {
 		resp, err = handleKudosReport(myCtx, req)
 	} else {
 		return events.APIGatewayProxyResponse{StatusCode: 404, Body: "Command not found"}, nil
@@ -94,9 +94,12 @@ func handleKudosReport(ctx *model.MyContext, slackCommand *slackmodel.SlackComma
 
 func handleKudosCommand(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
 	// return MyResponse{Message: fmt.Sprintf("%s is %d years old!", event.Name, event.Age)}, nil
-	kudosData := service.ConvertToKudosData(slackCommand)
+	kudosData, err := service.ConvertToKudosData(slackCommand)
+	if err != nil {
+		return service.BuildQuickSlackResponse(err.Error()), nil
+	}
 	ctx.Log.Infof("Kudos Data", "kudosData", kudosData)
-	err := repo.WriteKudosCommand(ctx, kudosData)
+	err = repo.WriteKudosCommand(ctx, kudosData)
 	if err != nil {
 		return nil, err
 	}

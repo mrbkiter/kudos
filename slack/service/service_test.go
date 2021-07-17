@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"kudos-app.github.com/model"
 	"kudos-app.github.com/slack/service"
+	"kudos-app.github.com/slack/slackmodel"
 	"kudos-app.github.com/utils"
 )
 
@@ -19,7 +20,7 @@ func Test_convertAwsRequestToSlackCommandRequest(t *testing.T) {
 	utils.ConvertJSONReaderToObject(strings.NewReader(payload), event)
 
 	command := service.ConvertAwsRequestToSlackCommandRequest(*event)
-	if *command.Text == "" {
+	if command.Text == "" {
 		t.Errorf("convert slack message error")
 	}
 
@@ -62,6 +63,35 @@ func Test_BuildUserTag(t *testing.T) {
 
 }
 
+func Test_ConvertToKudosData(t *testing.T) {
+	req := &slackmodel.SlackCommandRequest{
+		UserId: "US1",
+		Text:   "thanks <US2|mrbkiter> <US1|mrb> for helping us on tasks",
+	}
+	ret, err := service.ConvertToKudosData(req)
+	if err != nil {
+		t.Error("ConvertToKudosData has issue when converting to kudos data")
+	}
+	if len(ret.TargetUserIds) != 1 {
+		t.Errorf("TargetUserIds not returned correctly")
+	}
+	if ret.TargetUserIds[0].UserId != "US2" {
+		t.Error("TargetUserIds[0] not return correct id")
+	}
+}
+
+func Test_ConvertToKudosDataError(t *testing.T) {
+	req := &slackmodel.SlackCommandRequest{
+		UserId: "US1",
+		Text:   "<@U024D6VQX7Z|vu.yen.nguyen.88> <@U024U032H8A|vu.nguyen>",
+	}
+	_, err := service.ConvertToKudosData(req)
+	if err == nil {
+		t.Error("ConvertToKudosData should return error")
+	}
+}
+
+//(slackCommand *slackmodel.SlackCommandRequest) (*model.KudosData, error)
 //{"blocks":[{"string":"section","text":{"type":"mrkdwn","response_type":"ephemeral","text":"+2"}}]}
 /*
 {

@@ -19,10 +19,10 @@ type DynamoConfig struct {
 type KudosData struct {
 	TeamId        string
 	ChannelId     string
-	ChannelName   *string
+	ChannelName   string
 	SourceUserId  string
 	Text          string
-	ApiAppId      *string
+	ApiAppId      string
 	TargetUserIds []*UserNameIdMapping
 	MessageId     string
 	ResponseUrl   string

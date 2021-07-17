@@ -8,7 +8,21 @@ There are 3 supported commands:
 
 ``/kudos Thanks @mrbkiter, @abc for great support``
 
-This command would kudos mrbkiter and abc. It would increase +1 for each 
+This command would kudos mrbkiter and abc. It would increase +1 for each. There is kudos syntax you need to follow:
+
+``/kudos (thanks|great|good|space*) (any words but not <>) <list_of_users> something_else_here``
+
+For example: 
+
+Accepted kudos:
+
+``/kudos thanks @mrbkiter for helping ... ``
+``/kudos thank you @mrbkiter. You did great job``
+``/kudos great job @mrbkiter. Great release and helped @abc`` (counted for @mrbkiter)
+``/kudos @mrbkiter @abc. You did great release``
+
+Unaccepted kudos:
+``/kudos abcbasdasd @mrbkiter for something`` 
 
 ``/kudos-report <THIS_MONTH | LAST_MONTH | THIS_WEEK | LAST_WEEK> @mrbkiter @abc ``
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	b64 "encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,32 +28,37 @@ func ConvertAwsRequestToSlackCommandRequest(request events.APIGatewayProxyReques
 }
 func ConvertToKudosReportFilter(slackCommand *slackmodel.SlackCommandRequest) (*model.KudosReportFilter, model.ReportType) {
 	filter := new(model.KudosReportFilter)
-	filter.TeamId = *slackCommand.TeamId
-	userIdMappings := utils.ExtractUserIdsFromText(*slackCommand.Text)
+	filter.TeamId = slackCommand.TeamId
+	userIdMappings := utils.ExtractUserIdsFromText(slackCommand.Text, "")
 	userIds := make([]string, 0)
 	for _, mapping := range userIdMappings {
 		userIds = append(userIds, mapping.UserId)
 	}
 	filter.UserIds = userIds
-	filter.ReportTime = utils.ExtractReportTime(*slackCommand.Text)
-	reportType := utils.ExtractReportType(*slackCommand.Text)
+	filter.ReportTime = utils.ExtractReportTime(slackCommand.Text)
+	reportType := utils.ExtractReportType(slackCommand.Text)
 	return filter, reportType
 }
 
-func ConvertToKudosData(slackCommand *slackmodel.SlackCommandRequest) *model.KudosData {
+func ConvertToKudosData(slackCommand *slackmodel.SlackCommandRequest) (*model.KudosData, error) {
 	ret := new(model.KudosData)
 	ret.ApiAppId = slackCommand.ApiAppId
-	ret.ChannelId = *slackCommand.ChannelId
+	ret.ChannelId = slackCommand.ChannelId
 	ret.ChannelName = slackCommand.ChannelName
-	ret.MessageId = *slackCommand.TriggerId
-	ret.TeamId = *slackCommand.TeamId
-	ret.SourceUserId = *slackCommand.UserId
-	ret.ResponseUrl = *slackCommand.ResponseUrl
-	ret.Text = *slackCommand.Command + " " + *slackCommand.Text
-	ret.TargetUserIds = utils.ExtractUserIdsFromText(*slackCommand.Text)
+	ret.MessageId = slackCommand.TriggerId
+	ret.TeamId = slackCommand.TeamId
+	ret.SourceUserId = slackCommand.UserId
+	ret.ResponseUrl = slackCommand.ResponseUrl
+	ret.Text = slackCommand.Command + " " + slackCommand.Text
+	//analyze text
+	kudosText := utils.AnalyzeKudosText(slackCommand.Text)
+	if kudosText == "" {
+		return nil, errors.New("Unable to detect kudos text. Please check allowed kudos syntax again")
+	}
+	ret.TargetUserIds = utils.ExtractUserIdsFromText(kudosText, slackCommand.UserId)
 	ret.AppId = model.Slack
-	ret.Username = *slackCommand.Username
-	return ret
+	ret.Username = slackCommand.Username
+	return ret, nil
 }
 
 func BuildSlackResponseForReportDetail(reportDetail *model.KudosReportDetails) *slackmodel.SlackResponse {
@@ -97,6 +103,13 @@ func BuildSlackResponseForReport(kudosReportRet *model.KudosReportResult) *slack
 	return slackResp
 }
 
+func BuildQuickSlackResponse(text string) *slackmodel.SlackResponse {
+	slackResp := new(slackmodel.SlackResponse)
+	slackResp.ResponseType = slackmodel.In_channel
+	slackResp.Text = text
+	return slackResp
+}
+
 func BuildSlackResponse(kudosData *model.KudosData) *slackmodel.SlackResponse {
 
 	slackResp := new(slackmodel.SlackResponse)
@@ -110,7 +123,7 @@ func BuildSlackResponse(kudosData *model.KudosData) *slackmodel.SlackResponse {
 	for _, tgId := range kudosData.TargetUserIds {
 		targetUserTags = targetUserTags + BuildUserTag(tgId.UserId)
 	}
-	slackResp.Text = fmt.Sprintf("+%v for %v", len(kudosData.TargetUserIds), targetUserTags)
+	slackResp.Text = fmt.Sprintf("+1 for %v", targetUserTags)
 	return slackResp
 }
 
