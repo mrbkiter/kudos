@@ -17,11 +17,15 @@ For example:
 Accepted kudos:
 
 ``/kudos thanks @mrbkiter for helping ... ``
+
 ``/kudos thank you @mrbkiter. You did great job``
+
 ``/kudos great job @mrbkiter. Great release and helped @abc`` (counted for @mrbkiter)
+
 ``/kudos @mrbkiter @abc. You did great release``
 
 Unaccepted kudos:
+
 ``/kudos abcbasdasd @mrbkiter for something`` 
 
 ``/kudos-report <THIS_MONTH | LAST_MONTH | THIS_WEEK | LAST_WEEK> @mrbkiter @abc ``
