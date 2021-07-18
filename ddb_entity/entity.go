@@ -1,5 +1,23 @@
 package ddb_entity
 
+type KudosTeamSettings struct {
+	Id1            string `json:"id1"`
+	Id2            string `json:"id2"`
+	TeamId         string `json:"teamId"`
+	AdminChannelId string `json:"adminChannelId"`
+	Timestamp      int64  `json:"timestamp"`
+}
+
+type KudosGroupSettings struct {
+	Id1       string    `dynamo:"id1"`
+	Id2       string    `dynamo:"id2"`
+	TeamId    string    `dynamo:"teamId"`
+	GroupId   string    `dynamo:"groupId"`
+	Timestamp int64     `dynamo:"timestamp"`
+	Type      KudosType `dynamo:"type"`
+	UserIds   []string  `dynamo:"userIds,set"`
+}
+
 type KudosCommand struct {
 	Id1         string `json:"id1"`
 	Id2         string `json:"id2"`
@@ -32,6 +50,7 @@ type KudosCounter struct {
 type KudosType string
 
 const (
-	CommandType KudosType = "command"
-	ReportType  KudosType = "report"
+	CommandType   KudosType = "command"
+	ReportType    KudosType = "report"
+	GroupSettings KudosType = "group_settings"
 )

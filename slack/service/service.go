@@ -4,6 +4,7 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -37,7 +38,47 @@ func ConvertToKudosReportFilter(slackCommand *slackmodel.SlackCommandRequest) (*
 	filter.UserIds = userIds
 	filter.ReportTime = utils.ExtractReportTime(slackCommand.Text)
 	reportType := utils.ExtractReportType(slackCommand.Text)
+	if reportType == model.Report_aggregate {
+		if len(userIds) == 0 {
+			temps := strings.Split(slackCommand.Text, " ")
+			if !strings.Contains(temps[0], "_") { //this should be report type
+				filter.GroupId = utils.ExtractGroupId(temps[0])
+			}
+		}
+	}
 	return filter, reportType
+}
+
+//ConvertToKudosSettingsFilter convert slack to kudos settings input
+func ConvertToKudosSettingsInput(slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.KudosSettingsInput, error) {
+	ret := new(slackmodel.KudosSettingsInput)
+	ret.TeamId = slackCommand.TeamId
+	ret.ChannelId = slackCommand.ChannelId
+	ret.UserIds = utils.ExtractUserIdsFromText(slackCommand.Text, "")
+
+	remainingText := slackCommand.Text
+	if strings.HasPrefix(slackCommand.Text, string(slackmodel.Add_Member)) {
+		ret.CommandType = slackmodel.Add_Member
+		remainingText = strings.Replace(remainingText, string(slackmodel.Add_Member), "", 1)
+	} else if strings.HasPrefix(slackCommand.Text, string(slackmodel.Del_Member)) {
+		ret.CommandType = slackmodel.Del_Member
+		remainingText = strings.Replace(remainingText, string(slackmodel.Del_Member), "", 1)
+	} else if strings.HasPrefix(slackCommand.Text, string(slackmodel.List_Member)) {
+		ret.CommandType = slackmodel.List_Member
+		remainingText = strings.Replace(remainingText, string(slackmodel.List_Member), "", 1)
+	} else if strings.HasPrefix(slackCommand.Text, string(slackmodel.Add_Group)) {
+		ret.CommandType = slackmodel.Add_Group
+		remainingText = strings.Replace(remainingText, string(slackmodel.Add_Group), "", 1)
+	} else if strings.HasPrefix(slackCommand.Text, string(slackmodel.Del_Group)) {
+		ret.CommandType = slackmodel.Del_Group
+		remainingText = strings.Replace(remainingText, string(slackmodel.Del_Group), "", 1)
+	} else if strings.HasPrefix(slackCommand.Text, string(slackmodel.List_Group)) {
+		ret.CommandType = slackmodel.List_Group
+		remainingText = strings.Replace(remainingText, string(slackmodel.List_Group), "", 1)
+	}
+
+	ret.GroupId = utils.ExtractGroupId(strings.Trim(remainingText, " "))
+	return ret, nil
 }
 
 func ConvertToKudosData(slackCommand *slackmodel.SlackCommandRequest) (*model.KudosData, error) {

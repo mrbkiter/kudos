@@ -30,6 +30,26 @@ type KudosData struct {
 	Username      string
 }
 
+//KudosGroupSettingsMembers add | delete members
+type KudosGroupSettingsMembers struct {
+	TeamId        string
+	ChannelId     string
+	SourceUserId  string
+	GroupId       string
+	TargetUserIds []*UserNameIdMapping
+}
+
+//KudosTeamSettingsListGroups list all groups of specific team
+type KudosTeamSettingsListGroups struct {
+	TeamId string
+}
+
+//KudosTeamSettingsGroupAction create | delete | get group
+type KudosTeamSettingsGroupAction struct {
+	TeamId  string
+	GroupId string
+}
+
 type KudosCountUpdate struct {
 	TeamId    string
 	UserId    string
@@ -64,6 +84,7 @@ type KudosReportFilter struct {
 	TeamId     string     `json:"teamId"`
 	UserIds    []string   `json:"userIds"`
 	ReportTime ReportTime `json:"reportTime"`
+	GroupId    string     `json:"groupId"`
 }
 
 type KudosReportResult struct {

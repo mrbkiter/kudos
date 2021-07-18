@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/guregu/dynamo"
 	"kudos-app.github.com/ddb_entity"
 	"kudos-app.github.com/model"
 	"kudos-app.github.com/utils"
@@ -21,6 +22,7 @@ type DDBInterface interface {
 	Query(input *dynamodb.QueryInput) (*dynamodb.QueryOutput, error)
 	BatchWriteItem(input *dynamodb.BatchWriteItemInput) (*dynamodb.BatchWriteItemOutput, error)
 	TransactWriteItems(input *dynamodb.TransactWriteItemsInput) (*dynamodb.TransactWriteItemsOutput, error)
+	DeleteItem(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
 }
 
 type Repo interface {
@@ -28,11 +30,206 @@ type Repo interface {
 	IncreaseKudosCounter(ctx *model.MyContext, data *model.KudosCountUpdate) error
 	GetKudosReport(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportResult, error)
 	GetKudosReportDetails(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportDetails, error)
+	DeleteTeamGroup(ctx *model.MyContext, req *model.KudosTeamSettingsGroupAction) error
+	AddTeamGroup(ctx *model.MyContext, req *model.KudosTeamSettingsGroupAction) error
+	AddMembersToTeamGroup(ctx *model.MyContext, req *model.KudosGroupSettingsMembers) error
+	DeleteMembersFromTeamGroup(ctx *model.MyContext, req *model.KudosGroupSettingsMembers) error
+	ListMembersOfTeamGroup(ctx *model.MyContext, req *model.KudosTeamSettingsGroupAction) ([]string, error)
+	ListAllTeamGroups(ctx *model.MyContext, req *model.KudosTeamSettingsListGroups) ([]string, error)
+	doActionMembersToTeamGroup(ctx *model.MyContext, req *model.KudosGroupSettingsMembers, actionType string) error
 }
 
 type DDBRepo struct {
 	Repo
 	Ddb DDBInterface
+}
+
+func MapToGroupSettings(req *model.KudosTeamSettingsGroupAction) *ddb_entity.KudosGroupSettings {
+	ettGroupSettings := new(ddb_entity.KudosGroupSettings)
+	ettGroupSettings.Id1 = buildPartitionKey(req.TeamId, string(ddb_entity.GroupSettings))
+	ettGroupSettings.Id2 = req.GroupId
+	ettGroupSettings.GroupId = req.GroupId
+	ettGroupSettings.TeamId = req.TeamId
+	ettGroupSettings.Timestamp = time.Now().Unix()
+	ettGroupSettings.Type = ddb_entity.GroupSettings
+
+	return ettGroupSettings
+}
+
+func (me *DDBRepo) doActionMembersToTeamGroup(ctx *model.MyContext, req *model.KudosGroupSettingsMembers, actionType string) error {
+	addedUserIds := make([]*string, 0)
+
+	for _, val := range req.TargetUserIds {
+		addedUserIds = append(addedUserIds, &val.UserId)
+	}
+
+	actionExpressionQuery := "ADD userIds :val"
+	if actionType == "delete" {
+		actionExpressionQuery = "DELETE userIds :val"
+	}
+	writeItem := &dynamodb.TransactWriteItem{
+		Update: &dynamodb.Update{
+			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+				":val": {
+					SS: addedUserIds,
+				},
+			},
+			TableName: aws.String(ctx.GlobalConfig.Ddb.TableName),
+			Key: map[string]*dynamodb.AttributeValue{
+				"id1": {
+					S: aws.String(buildPartitionKey(req.TeamId, string(ddb_entity.GroupSettings))),
+				},
+				"id2": {
+					S: aws.String(req.GroupId),
+				},
+			},
+			UpdateExpression: aws.String(actionExpressionQuery),
+		},
+	}
+	transactInputs := &dynamodb.TransactWriteItemsInput{}
+	transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 1)
+	transactInputs.TransactItems[0] = writeItem
+	_, err := me.Ddb.TransactWriteItems(transactInputs)
+	return err
+}
+
+func (me *DDBRepo) AddMembersToTeamGroup(ctx *model.MyContext, req *model.KudosGroupSettingsMembers) error {
+	return me.doActionMembersToTeamGroup(ctx, req, "add")
+}
+
+func (me *DDBRepo) DeleteMembersFromTeamGroup(ctx *model.MyContext, req *model.KudosGroupSettingsMembers) error {
+	return me.doActionMembersToTeamGroup(ctx, req, "delete")
+}
+
+func (me *DDBRepo) ListMembersOfTeamGroup(ctx *model.MyContext, req *model.KudosTeamSettingsGroupAction) ([]string, error) {
+	q := &dynamodb.QueryInput{
+		TableName:              aws.String(ctx.GlobalConfig.Ddb.TableName),
+		KeyConditionExpression: utils.String("id1 = :id1 AND id2 = :id2"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":id1": {
+				S: utils.String(buildPartitionKey(req.TeamId, string(ddb_entity.GroupSettings))),
+			},
+			":id2": {
+				S: utils.String(req.GroupId),
+			},
+		},
+		Limit: utils.Int64(1),
+	}
+	output, err := me.Ddb.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	members := make([]string, 0)
+	if len(output.Items) > 0 {
+		groups := make([]*ddb_entity.KudosGroupSettings, 0)
+		err = dynamodbattribute.UnmarshalListOfMaps(output.Items, &groups)
+		if err != nil {
+			return nil, err
+		}
+		members = groups[0].UserIds
+	}
+	return members, nil
+}
+func (me *DDBRepo) ListAllTeamGroups(ctx *model.MyContext, req *model.KudosTeamSettingsListGroups) ([]string, error) {
+	q := &dynamodb.QueryInput{
+		TableName:              aws.String(ctx.GlobalConfig.Ddb.TableName),
+		KeyConditionExpression: utils.String("#id1 = :val"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":val": {
+				S: utils.String(buildPartitionKey(req.TeamId, string(ddb_entity.GroupSettings))),
+			},
+		},
+		ExpressionAttributeNames: map[string]*string{
+			"#id1": utils.String("id1"),
+		},
+		Limit:                utils.Int64(500),
+		ProjectionExpression: utils.String("id1,groupId"),
+	}
+	output, err := me.Ddb.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	groupIds := make([]string, 0)
+	if len(output.Items) > 0 {
+		groups := make([]*ddb_entity.KudosGroupSettings, 0)
+		err = dynamodbattribute.UnmarshalListOfMaps(output.Items, &groups)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range groups {
+			groupIds = append(groupIds, id.GroupId)
+		}
+	}
+	return groupIds, nil
+}
+func (me *DDBRepo) DeleteTeamGroup(ctx *model.MyContext, req *model.KudosTeamSettingsGroupAction) error {
+	if len(req.GroupId) == 0 || len(req.TeamId) == 0 {
+		return errors.New("GroupId And TeamId is required")
+	}
+
+	settings := MapToGroupSettings(req)
+
+	delete := &dynamodb.DeleteItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"id1": {
+				S: utils.String(settings.Id1),
+			},
+			"id2": {
+				S: utils.String(settings.Id2),
+			},
+		},
+		TableName: aws.String(ctx.GlobalConfig.Ddb.TableName),
+	}
+	_, err := me.Ddb.DeleteItem(delete)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (me *DDBRepo) AddTeamGroup(ctx *model.MyContext, req *model.KudosTeamSettingsGroupAction) error {
+	if len(req.GroupId) == 0 || len(req.TeamId) == 0 {
+		return errors.New("GroupId And TeamId is required")
+	}
+
+	settings := MapToGroupSettings(req)
+	av, err := dynamo.MarshalItem(settings)
+	if err != nil {
+		return err
+	}
+
+	key := &dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"id1": {
+				S: utils.String(settings.Id1),
+			},
+			"id2": {
+				S: utils.String(settings.Id2),
+			},
+		},
+		TableName: aws.String(ctx.GlobalConfig.Ddb.TableName),
+	}
+	val, err := me.Ddb.GetItem(key)
+	if val != nil && len(val.Item) > 0 {
+		return errors.New("It does not allow to recreate TeamGroup")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	input := &dynamodb.PutItemInput{
+		Item:      av,
+		TableName: aws.String(ctx.GlobalConfig.Ddb.TableName),
+	}
+
+	_, err = me.Ddb.PutItem(input)
+	if err != nil {
+		ctx.Log.Errorf("Error writing result %v to ddb because [%v]", req, err)
+		return err
+	}
+
+	return nil
 }
 
 func (me *DDBRepo) GetKudosReportDetails(ctx *model.MyContext, filter *model.KudosReportFilter) (*model.KudosReportDetails, error) {
@@ -163,6 +360,16 @@ func (me *DDBRepo) GetKudosReport(ctx *model.MyContext, filter *model.KudosRepor
 		yearNumber, weekNumber := calculatedTime.ISOWeek()
 		id2WeekNumber := buildPartitionKey(fmt.Sprint(yearNumber), fmt.Sprint(weekNumber))
 		timeFilter = fmt.Sprintf(timeFilter, id2WeekNumber)
+	}
+	if len(filter.GroupId) > 0 {
+		req := new(model.KudosTeamSettingsGroupAction)
+		req.GroupId = filter.GroupId
+		req.TeamId = filter.TeamId
+		members, err := me.ListMembersOfTeamGroup(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		filter.UserIds = members
 	}
 	if len(filter.UserIds) > 0 { //get specific users
 		q.KeyConditionExpression = aws.String(fmt.Sprintf("%v AND begins_with(id2, :filterTime)", *q.KeyConditionExpression))

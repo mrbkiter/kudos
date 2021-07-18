@@ -91,6 +91,60 @@ func Test_ConvertToKudosDataError(t *testing.T) {
 	}
 }
 
+func Test_ConvertToKudosReportFilter(t *testing.T) {
+	req := &slackmodel.SlackCommandRequest{
+		Text: "group-id LAST_MONTH",
+	}
+	f, reportType := service.ConvertToKudosReportFilter(req)
+	if f.GroupId != "group-id" || reportType != model.Report_aggregate {
+		t.Error("ConvertToKudosReportFilter extracted wrong group-id")
+	}
+	req.Text = "group-id"
+	f, _ = service.ConvertToKudosReportFilter(req)
+	if f.GroupId != "group-id" {
+		t.Error("ConvertToKudosReportFilter extracted wrong group-id")
+	}
+
+	req.Text = "LAST_MONTH"
+	f, reportType = service.ConvertToKudosReportFilter(req)
+	if len(f.GroupId) > 0 || f.ReportTime != model.LAST_MONTH {
+		t.Error("ConvertToKudosReportFilter extracted wrong group-id")
+	}
+
+}
+
+func Test_ConvertToKudosSettingsInput(t *testing.T) {
+	req := &slackmodel.SlackCommandRequest{
+		Text: "add-member group-id <@UID1>",
+	}
+	input, err := service.ConvertToKudosSettingsInput(req)
+	if err != nil {
+		t.Error("ConvertToKudosSettingsInput should not return error")
+	}
+	if input.CommandType != slackmodel.Add_Member || input.GroupId != "group-id" || len(input.UserIds) != 1 {
+		t.Error("ConvertToKudosSettingsInput wrong convert to add-member")
+	}
+
+	req.Text = "list-member group-id"
+	input, err = service.ConvertToKudosSettingsInput(req)
+	if err != nil {
+		t.Error("ConvertToKudosSettingsInput should not return error")
+	}
+	if input.CommandType != slackmodel.List_Member {
+		t.Error("ConvertToKudosSettingsInput wrong convert to list-member")
+	}
+
+	req.Text = "list-group"
+	input, err = service.ConvertToKudosSettingsInput(req)
+	if err != nil {
+		t.Error("ConvertToKudosSettingsInput should not return error")
+	}
+	if input.CommandType != slackmodel.List_Group {
+		t.Error("ConvertToKudosSettingsInput wrong convert to list-member")
+	}
+
+}
+
 //(slackCommand *slackmodel.SlackCommandRequest) (*model.KudosData, error)
 //{"blocks":[{"string":"section","text":{"type":"mrkdwn","response_type":"ephemeral","text":"+2"}}]}
 /*

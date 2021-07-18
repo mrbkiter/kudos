@@ -126,10 +126,21 @@ func ExtractUserIdsFromText(text string, excludedUserId string) []*model.UserNam
 	return v
 }
 
-func AnalyzeKudosText(text string) string {
-	rg := regexp.MustCompile(`(?i)^((thanks|great|good|thank|kudos)[^<>]*|\s*)((<[^<>]*>)+\s*)+`)
+var kudosSyntaxRegex = regexp.MustCompile(`(?i)^((thanks|great|good|thank|kudos)[^<>]*|\s*)((<[^<>]*>)+\s*)+`)
 
-	matching := rg.FindString(text)
+func AnalyzeKudosText(text string) string {
+
+	matching := kudosSyntaxRegex.FindString(text)
+
+	return matching
+}
+
+//underscore is reserved character
+var kudosGroupIdRegex = regexp.MustCompile(`^([A-Za-z0-9-]+)`)
+
+func ExtractGroupId(text string) string {
+
+	matching := kudosGroupIdRegex.FindString(text)
 
 	return matching
 }

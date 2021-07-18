@@ -60,3 +60,15 @@ func Test_ExtractKudosText(t *testing.T) {
 		t.Error("Extract kudos text error")
 	}
 }
+
+func Test_ExtractGroupId(t *testing.T) {
+	groupId := utils.ExtractGroupId("group-Id <@U012ABCDEF|mrbkiter> ")
+	if groupId != "group-Id" {
+		t.Error("Error when extracting groupId")
+	}
+	groupId = utils.ExtractGroupId(" <@U012ABCDEF|mrbkiter> ")
+	if groupId != "" {
+		t.Error("Error when extracting groupId")
+	}
+
+}

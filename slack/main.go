@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -61,9 +62,12 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		resp, err = handleKudosCommand(myCtx, req)
 	} else if req.Command == "/kudos-report" {
 		resp, err = handleKudosReport(myCtx, req)
+	} else if req.Command == "/kudos-settings" {
+		resp, err = handleKudosSettings(myCtx, req)
 	} else {
 		return events.APIGatewayProxyResponse{StatusCode: 404, Body: "Command not found"}, nil
 	}
+
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: 400}, err
 	}
@@ -105,6 +109,83 @@ func handleKudosCommand(ctx *model.MyContext, slackCommand *slackmodel.SlackComm
 	}
 
 	return service.BuildSlackResponse(kudosData), nil
+}
+
+func handleKudosSettings(ctx *model.MyContext, slackCommand *slackmodel.SlackCommandRequest) (*slackmodel.SlackResponse, error) {
+	kudosSettingsInput, err := service.ConvertToKudosSettingsInput(slackCommand)
+	if err != nil {
+		return service.BuildQuickSlackResponse(err.Error()), nil
+	}
+	ctx.Log.Infof("Kudos Settings", "settings", kudosSettingsInput)
+
+	switch kudosSettingsInput.CommandType {
+	case slackmodel.Add_Member:
+		memberReq := convertToKudosGroupSettingsMembers(kudosSettingsInput)
+		err = repo.AddMembersToTeamGroup(ctx, memberReq)
+		return service.BuildQuickSlackResponse("Members have been added"), nil
+	case slackmodel.Del_Member:
+		memberReq := convertToKudosGroupSettingsMembers(kudosSettingsInput)
+		err = repo.DeleteMembersFromTeamGroup(ctx, memberReq)
+		return service.BuildQuickSlackResponse("Members have been deleted"), nil
+	case slackmodel.List_Member:
+		req := convertToKudosTeamSettingsGroupAction(kudosSettingsInput)
+		members, err := repo.ListMembersOfTeamGroup(ctx, req)
+		if err != nil {
+			return service.BuildQuickSlackResponse(err.Error()), nil
+		}
+		if len(members) == 0 {
+			return service.BuildQuickSlackResponse("No member found"), nil
+		}
+		userTags := make([]string, 0)
+		for _, userId := range members {
+			userTags = append(userTags, service.BuildUserTag(userId))
+		}
+		return service.BuildQuickSlackResponse(strings.Join(userTags, ",")), nil
+	case slackmodel.Add_Group:
+		req := convertToKudosTeamSettingsGroupAction(kudosSettingsInput)
+		err = repo.AddTeamGroup(ctx, req)
+		return service.BuildQuickSlackResponse("Group has been created"), nil
+	case slackmodel.Del_Group:
+		req := convertToKudosTeamSettingsGroupAction(kudosSettingsInput)
+		err = repo.DeleteTeamGroup(ctx, req)
+		return service.BuildQuickSlackResponse("Group has been deleted"), nil
+	case slackmodel.List_Group:
+		req := convertToKudosTeamSettingsListGroups(kudosSettingsInput)
+		ctx.Log.Infow("List group", "req", req)
+		groupIds, err := repo.ListAllTeamGroups(ctx, req)
+		if err != nil {
+			return service.BuildQuickSlackResponse(err.Error()), nil
+		}
+		if len(groupIds) == 0 {
+			return service.BuildQuickSlackResponse("No group found"), nil
+		}
+		return service.BuildQuickSlackResponse(strings.Join(groupIds, ",")), nil
+	}
+
+	if err != nil {
+		return service.BuildQuickSlackResponse(err.Error()), nil
+	}
+	return service.BuildQuickSlackResponse("Command not support. Use add-group, del-group, list-group, add-member, del-member, list-member"), nil
+}
+
+func convertToKudosTeamSettingsListGroups(kudosSettingsInput *slackmodel.KudosSettingsInput) *model.KudosTeamSettingsListGroups {
+	req := new(model.KudosTeamSettingsListGroups)
+	req.TeamId = kudosSettingsInput.TeamId
+	return req
+}
+func convertToKudosTeamSettingsGroupAction(kudosSettingsInput *slackmodel.KudosSettingsInput) *model.KudosTeamSettingsGroupAction {
+	req := new(model.KudosTeamSettingsGroupAction)
+	req.GroupId = kudosSettingsInput.GroupId
+	req.TeamId = kudosSettingsInput.TeamId
+	return req
+}
+
+func convertToKudosGroupSettingsMembers(kudosSettingsInput *slackmodel.KudosSettingsInput) *model.KudosGroupSettingsMembers {
+	memberReq := new(model.KudosGroupSettingsMembers)
+	memberReq.TeamId = kudosSettingsInput.TeamId
+	memberReq.GroupId = kudosSettingsInput.GroupId
+	memberReq.TargetUserIds = kudosSettingsInput.UserIds
+	return memberReq
 }
 
 func main() {

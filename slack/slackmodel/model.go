@@ -1,5 +1,7 @@
 package slackmodel
 
+import "kudos-app.github.com/model"
+
 type SlackCommandRequest struct {
 	TeamId         string `json:"team_id"`
 	TeamDomain     string `json:"team_domain"`
@@ -37,3 +39,22 @@ const (
 	In_channel SlackResponseType = "in_channel"
 	Ephemeral  SlackResponseType = "ephemeral"
 )
+
+type SlackSettingsCommand string
+
+const (
+	Add_Member  SlackSettingsCommand = "add-member"
+	Del_Member  SlackSettingsCommand = "del-member"
+	List_Member SlackSettingsCommand = "list-member"
+	Add_Group   SlackSettingsCommand = "add-group"
+	Del_Group   SlackSettingsCommand = "del-group"
+	List_Group  SlackSettingsCommand = "list-group"
+)
+
+type KudosSettingsInput struct {
+	TeamId      string
+	ChannelId   string
+	UserIds     []*model.UserNameIdMapping
+	CommandType SlackSettingsCommand
+	GroupId     string
+}
