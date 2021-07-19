@@ -110,7 +110,11 @@ func Test_ConvertToKudosReportFilter(t *testing.T) {
 	if len(f.GroupId) > 0 || f.ReportTime != model.LAST_MONTH {
 		t.Error("ConvertToKudosReportFilter extracted wrong group-id")
 	}
-
+	req.Text = ""
+	f, reportType = service.ConvertToKudosReportFilter(req)
+	if f.ReportTime != model.THIS_MONTH {
+		t.Error("ConvertToKudosReportFilter extracted wrong group-id")
+	}
 }
 
 func Test_ConvertToKudosSettingsInput(t *testing.T) {

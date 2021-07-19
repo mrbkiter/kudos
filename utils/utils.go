@@ -88,8 +88,10 @@ func ExtractReportTime(text string) model.ReportTime {
 		return model.LAST_WEEK
 	} else if strings.Contains(text, string(model.THIS_MONTH)) {
 		return model.THIS_MONTH
-	} else {
+	} else if strings.Contains(text, string(model.THIS_WEEK)) {
 		return model.THIS_WEEK
+	} else {
+		return model.THIS_MONTH
 	}
 }
 
@@ -136,11 +138,15 @@ func AnalyzeKudosText(text string) string {
 }
 
 //underscore is reserved character
-var kudosGroupIdRegex = regexp.MustCompile(`^([A-Za-z0-9-]+)`)
+var kudosGroupIdRegex = regexp.MustCompile(`^([A-Za-z0-9-_]+)`)
+var kudosKeywordRegex = regexp.MustCompile(`(THIS_MONTH|THIS_WEEK|LAST_MONTH|LAST_WEEK)`)
 
 func ExtractGroupId(text string) string {
 
 	matching := kudosGroupIdRegex.FindString(text)
+	if kudosKeywordRegex.MatchString(matching) {
+		return ""
+	}
 
 	return matching
 }

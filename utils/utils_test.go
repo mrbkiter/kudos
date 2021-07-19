@@ -70,5 +70,13 @@ func Test_ExtractGroupId(t *testing.T) {
 	if groupId != "" {
 		t.Error("Error when extracting groupId")
 	}
+	groupId = utils.ExtractGroupId("group_id")
+	if groupId != "group_id" {
+		t.Error("Error when extracting groupId")
+	}
+	groupId = utils.ExtractGroupId("THIS_MONTH")
+	if groupId != "" {
+		t.Error("Error when extracting groupId")
+	}
 
 }

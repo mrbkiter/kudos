@@ -121,14 +121,25 @@ func handleKudosSettings(ctx *model.MyContext, slackCommand *slackmodel.SlackCom
 	switch kudosSettingsInput.CommandType {
 	case slackmodel.Add_Member:
 		memberReq := convertToKudosGroupSettingsMembers(kudosSettingsInput)
+		ctx.Log.Infow("Add_Members", "teamId", memberReq.TeamId, "groupId", memberReq.GroupId, "userId", slackCommand.UserId)
+		if len(memberReq.GroupId) == 0 {
+			return service.BuildQuickSlackResponse(GroupIdPatternMessage), nil
+		}
 		err = repo.AddMembersToTeamGroup(ctx, memberReq)
 		return service.BuildQuickSlackResponse("Members have been added"), nil
 	case slackmodel.Del_Member:
 		memberReq := convertToKudosGroupSettingsMembers(kudosSettingsInput)
+		ctx.Log.Infow("Delete_Members", "teamId", memberReq.TeamId, "groupId", memberReq.GroupId, "userId", slackCommand.UserId)
+		if len(memberReq.GroupId) == 0 {
+			return service.BuildQuickSlackResponse(GroupIdPatternMessage), nil
+		}
 		err = repo.DeleteMembersFromTeamGroup(ctx, memberReq)
 		return service.BuildQuickSlackResponse("Members have been deleted"), nil
 	case slackmodel.List_Member:
 		req := convertToKudosTeamSettingsGroupAction(kudosSettingsInput)
+		if len(req.GroupId) == 0 {
+			return service.BuildQuickSlackResponse(GroupIdPatternMessage), nil
+		}
 		members, err := repo.ListMembersOfTeamGroup(ctx, req)
 		if err != nil {
 			return service.BuildQuickSlackResponse(err.Error()), nil
@@ -143,10 +154,15 @@ func handleKudosSettings(ctx *model.MyContext, slackCommand *slackmodel.SlackCom
 		return service.BuildQuickSlackResponse(strings.Join(userTags, ",")), nil
 	case slackmodel.Add_Group:
 		req := convertToKudosTeamSettingsGroupAction(kudosSettingsInput)
+		ctx.Log.Infow("Add_Group", "teamId", req.TeamId, "groupId", req.GroupId, "userId", slackCommand.UserId)
+		if len(req.GroupId) == 0 {
+			return service.BuildQuickSlackResponse(GroupIdPatternMessage), nil
+		}
 		err = repo.AddTeamGroup(ctx, req)
 		return service.BuildQuickSlackResponse("Group has been created"), nil
 	case slackmodel.Del_Group:
 		req := convertToKudosTeamSettingsGroupAction(kudosSettingsInput)
+		ctx.Log.Infow("Delete_Group", "teamId", req.TeamId, "groupId", req.GroupId, "userId", slackCommand.UserId)
 		err = repo.DeleteTeamGroup(ctx, req)
 		return service.BuildQuickSlackResponse("Group has been deleted"), nil
 	case slackmodel.List_Group:
@@ -194,3 +210,5 @@ func main() {
 	repo = initRepo()
 	lambda.Start(handler)
 }
+
+const GroupIdPatternMessage = "Group Id has to follow pattern: [a-zA-Z0-9-_]+ and not reserved keywords"

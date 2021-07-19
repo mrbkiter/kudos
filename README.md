@@ -4,7 +4,9 @@ Kudos is the simple and easy to use employee recognition software that enhances 
 
 ## Syntax
 
-There are 3 supported commands: 
+There are 3 kinds of commands: kudos, kudos-report, kudos-settings
+
+### kudos command
 
 ``/kudos Thanks @mrbkiter, @abc for great support``
 
@@ -28,6 +30,8 @@ Unaccepted kudos:
 
 ``/kudos abcbasdasd @mrbkiter for something`` 
 
+### kudos-report
+
 ``/kudos-report <THIS_MONTH | LAST_MONTH | THIS_WEEK | LAST_WEEK> @mrbkiter @abc ``
 
 This command would return report for mrbkiter and abc (in case you input empty, it would return all user report). There are 4 report time types: THIS_MONTH, LAST_MONTH, THIS_WEEK, LAST_WEEK (default is THIS_WEEK) The result is returned in desc order
@@ -35,6 +39,24 @@ This command would return report for mrbkiter and abc (in case you input empty, 
 ``/kudos-report detail @mrbkiter THIS_MONTH`` 
 
 This command would return report detail for mrbkiter in this month. 
+
+### kudos-settings 
+
+``/kudos-settings add-member | del-member | list-member | add-group | del-group | list-group``
+
+This command would help manage group settings. 
+
+add-group: add new group. ``kudos-settings add-group group-id`` group-id pattern: [a-zA-Z0-9-_]+ and not reserved keywords 
+
+del-group: delete group by id ``kudos-settings del-group group-id``
+
+list-group: list of all groups in team ``kudos-settings list-group``
+
+add-member: add members to specific group ``kudos-settings add-member group_id @a @b @c`` 
+
+del-member: delete members from specific group ``kudos-settings del-member group_id @a @b @c``
+
+list-member: list all members of specific group ``kudos-settings list-member group_id``
 
 ## The Architecture
 
