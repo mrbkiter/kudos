@@ -447,34 +447,39 @@ func (me *DDBRepo) IncreaseKudosCounter(ctx *model.MyContext, data *model.KudosC
 	id2Month, id2WeekNumber := BuildIdMonthAndWeek(data.Timestamp, data.UserId)
 	// timestamp := time.Unix(data.Timestamp, 0)
 
-	// //build 2 counter
-	// monthFormat := timestamp.Format("2006-01")
-	// yearNumber, weekNumber := timestamp.ISOWeek()
-	// id2Month := buildPartitionKey(monthFormat, data.UserId)
-	// id2WeekNumber := buildPartitionKey(fmt.Sprint(yearNumber), fmt.Sprint(weekNumber), data.UserId)
-
+	//build month
 	transactInputs := &dynamodb.TransactWriteItemsInput{}
-
 	monthInput := buildTransactionUpdateItem(ctx, id1, id2Month, data)
-	weekInput := buildTransactionUpdateItem(ctx, id1, id2WeekNumber, data)
-	transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 2)
+	transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 1)
 	transactInputs.TransactItems[0] = monthInput
-	transactInputs.TransactItems[1] = weekInput
-
 	_, err := me.Ddb.TransactWriteItems(transactInputs)
 	if err != nil {
 		ctx.Log.Warnw("Error when writing counter", "err", err)
 		//need to check if err is from record not exists
 		putMonthInput := buildTransactionPutItem(ctx, id1, id2Month, data)
-		putWeekInput := buildTransactionPutItem(ctx, id1, id2WeekNumber, data)
-		transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 2)
+		transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 1)
 		transactInputs.TransactItems[0] = putMonthInput
-		transactInputs.TransactItems[1] = putWeekInput
 
+		_, err := me.Ddb.TransactWriteItems(transactInputs)
+		if err != nil {
+			return err
+		}
+	}
+
+	//build week counter
+	weekInput := buildTransactionUpdateItem(ctx, id1, id2WeekNumber, data)
+	transactInputs.TransactItems[0] = weekInput
+	_, err = me.Ddb.TransactWriteItems(transactInputs)
+	if err != nil {
+		ctx.Log.Warnw("Error when writing counter", "err", err)
+		//need to check if err is from record not exists
+		putWeekInput := buildTransactionPutItem(ctx, id1, id2WeekNumber, data)
+		transactInputs.TransactItems = make([]*dynamodb.TransactWriteItem, 1)
+		transactInputs.TransactItems[0] = putWeekInput
 		_, err := me.Ddb.TransactWriteItems(transactInputs)
 		return err
 	}
-	return err
+	return nil
 }
 
 func buildTransactionUpdateItem(ctx *model.MyContext, id1 string, id2 string, counter *model.KudosCountUpdate) *dynamodb.TransactWriteItem {
