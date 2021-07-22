@@ -1,6 +1,6 @@
 # kudos
 
-Kudos is the simple and easy to use employee recognition software that enhances employee engagement and team communication. The first version (0.0.1) is integration with Slack chat which includes /kudos and /kudos-report commands
+Kudos is the simple and easy to use employee recognition software that enhances employee engagement and team communication. The first version (0.0.1) is integration with Slack chat which includes /kudos, /kudos-settings and /kudos-report commands
 
 ## Syntax
 
@@ -70,22 +70,22 @@ The table need preconfigured partition key id1 and sort key id2 (both are string
 
 Example: 
 
-``{
-  "channelId": "C023G6N6D5E",
-  "id1": "T022PA5N7KP#U022SCGDY58",
-  "id2": "2232569221158.2091345755669.efa17f545015716af8bfa28f0ca96208",
-  "msgId": "2232569221158.2091345755669.efa17f545015716af8bfa28f0ca96208",
-  "sourceUserId": "U024U032H8A",
-  "teamId": "T022PA5N7KP",
-  "teamIdMonth": "T022PA5N7KP#2021-07",
-  "teamIdWeek": "T022PA5N7KP#2021#26",
-  "text": "/kudos you did great job <@U024D6VQX7Z|vu.yen.nguyen.88> <@U022SCGDY58|mrbkiter> <@U024U032H8A|vu.nguyen>",
-  "timestamp": 1625411561,
-  "ttl": 1633187561,
-  "type": "**command**",
-  "userId": "U022SCGDY58",
-  "username": "mrbkiter"
-}``
+``{  
+  "channelId": "C023G6N6D5E",  
+  "id1": "T022PA5N7KP#U022SCGDY58",  
+  "id2": "2232569221158.2091345755669.efa17f545015716af8bfa28f0ca96208",  
+  "msgId": "2232569221158.2091345755669.efa17f545015716af8bfa28f0ca96208",  
+  "sourceUserId": "U024U032H8A",  
+  "teamId": "T022PA5N7KP",  
+  "teamIdMonth": "T022PA5N7KP#2021-07",  
+  "teamIdWeek": "T022PA5N7KP#2021#26",  
+  "text": "/kudos you did great job <@U024D6VQX7Z|vu.yen.nguyen.88> <@U022SCGDY58|mrbkiter> <@U024U032H8A|vu.nguyen>",  
+  "timestamp": 1625411561,  
+  "ttl": 1633187561,  
+  "type": "**command**",  
+  "userId": "U022SCGDY58",  
+  "username": "mrbkiter"  
+}``  
 
 For report, it is triggered by ddb event trigger (which you need to enable at Trigger tab of your table). The trigger would be connected to a lambda function (report folder in this project) to help pre-calculate MONTH and WEEK total kudos of users. 
 
@@ -93,25 +93,25 @@ For example:
 
 Week report: 
 
-``{
-  "count": 3,
-  "id1": "T022PA5N7KP#report",
-  "id2": "2021#26#U024D6VQX7Z",
-  "teamId": "T022PA5N7KP",
-  "userId": "U024D6VQX7Z",
-  "username": "vu.yen.nguyen.88"
-}``
+``{  
+  "count": 3,  
+  "id1": "T022PA5N7KP#report",  
+  "id2": "2021#26#U024D6VQX7Z",  
+  "teamId": "T022PA5N7KP",  
+  "userId": "U024D6VQX7Z",  
+  "username": "vu.yen.nguyen.88"  
+}``  
 
 Monthly report: 
 
-``{
-  "count": 3,
-  "id1": "T022PA5N7KP#report",
-  "id2": "2021-07#U024D6VQX7Z",
-  "teamId": "T022PA5N7KP",
-  "userId": "U024D6VQX7Z",
-  "username": "vu.yen.nguyen.88"
-}``
+``{  
+  "count": 3,  
+  "id1": "T022PA5N7KP#report",  
+  "id2": "2021-07#U024D6VQX7Z",  
+  "teamId": "T022PA5N7KP",  
+  "userId": "U024D6VQX7Z",  
+  "username": "vu.yen.nguyen.88"  
+}``  
 
 If you notice, the partition key is composed as <team_id>#report (for report type), and <team_id>#<user_id> for command type. The sort key of report_type is <yyyy-MM>#<user_id>, or <yyyy>#<week_no>#<user_id> for week report. The id2 of command type is message id. 
   
