@@ -66,7 +66,7 @@ The project is written in Golang, using aws dynamodb for db, aws API Gateway and
 
 ### Dynamodb design
 
-The table need preconfigured partition key id1 and sort key id2 (both are string). Currently there are 2 main types: command and report. Whenever users type a kudos command, their command would be stored in ddb. (breaking down to each of kudos users to one row). We besides also calculate week number of the year and yyyy-mm for report builder. 
+The table need preconfigured partition key id1 and sort key id2 (both are string). Currently there are 3 main types: command, settings and report. Whenever users type a kudos command, their command would be stored in ddb. (breaking down to each of kudos users to one row). We besides also calculate week number of the year and yyyy-mm for report builder. 
 
 Example: 
 
